@@ -1,16 +1,14 @@
 import os
 
-RULES_LIST = "rules-src/rules.list"
-OUTPUT = "build/config.yaml"
-
-BASE = open("config/base.yaml").read()
-NODE = open("config/node.yaml").read()
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+RULE_FILE = os.path.join(BASE_DIR, "rules-src/rules.list")
+OUTPUT = os.path.join(BASE_DIR, "build/config.yaml")
 
 custom_rules = []
 
 section = None
 
-with open(RULES_LIST) as f:
+with open(RULE_FILE, "r", encoding="utf-8") as f:
     for line in f:
         line = line.strip()
 
@@ -18,129 +16,60 @@ with open(RULES_LIST) as f:
             continue
 
         if line.startswith("["):
-            section = line.strip("[]")
+            section = line
             continue
 
-        if section == "Custom_link":
+        if section == "[Custom_link]":
             name = line.split("|")[0]
             custom_rules.append(name)
 
-###################################
-# 生成 proxy-groups
-###################################
+os.makedirs(os.path.dirname(OUTPUT), exist_ok=True)
 
-def gen_groups():
-    groups = []
+with open(OUTPUT, "w", encoding="utf-8") as f:
+    f.write("port: 7890\n")
+    f.write("socks-port: 7891\n")
+    f.write("allow-lan: true\n")
+    f.write("mode: rule\n\n")
 
-    base_group = f"""
-  - name: 🚀 节点选择
+    f.write("proxies:\n")
+    f.write("""  - {name: US-1, type: ss, server: 1.1.1.1, port: 1000, cipher: aes-128-gcm, password: 123456}
+  - {name: US-2, type: ss, server: 1.1.1.2, port: 1000, cipher: aes-128-gcm, password: 123456}
+  - {name: UK-1, type: ss, server: 2.2.2.1, port: 1000, cipher: aes-128-gcm, password: 123456}
+  - {name: UK-2, type: ss, server: 2.2.2.2, port: 1000, cipher: aes-128-gcm, password: 123456}
+  - {name: HK-1, type: ss, server: 3.3.3.1, port: 1000, cipher: aes-128-gcm, password: 123456}
+  - {name: HK-2, type: ss, server: 3.3.3.2, port: 1000, cipher: aes-128-gcm, password: 123456}
+
+""")
+
+    f.write("proxy-groups:\n")
+    f.write("""  - name: 🚀 节点选择
     type: select
-    proxies:
-"""
-    # 提取节点名称
-    nodes = []
-    for line in NODE.splitlines():
-        if "name:" in line:
-            n = line.split("name:")[1].split(",")[0].strip()
-            nodes.append(n)
+    proxies: [US-1, US-2, UK-1, UK-2, HK-1, HK-2]
 
-    for n in nodes:
-        base_group += f"      - {n}\n"
-
-    auto_group = base_group.replace("select", "url-test")
-    auto_group = auto_group.replace("🚀 节点选择", "♻️ 自动选择")
-    auto_group += "    url: http://www.gstatic.com/generate_204\n    interval: 300\n"
-
-    groups.append(base_group)
-    groups.append(auto_group)
-
-    groups.append("""
   - name: 🟢 全球直连
     type: select
-    proxies:
-      - DIRECT
+    proxies: [DIRECT]
+
+  - name: ♻️ 自动选择
+    type: url-test
+    proxies: [US-1, US-2, UK-1, UK-2, HK-1, HK-2]
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+
 """)
 
-    for r in custom_rules:
-        groups.append(f"""
-  - name: {r}
+    for name in custom_rules:
+        f.write(f"""  - name: {name}
     type: select
-    proxies:
-      - ♻️ 自动选择
-      - 🚀 节点选择
+    proxies: [🚀 节点选择, ♻️ 自动选择, 🟢 全球直连]
+
 """)
 
-    return "\n".join(groups)
+    f.write("rules:\n")
 
-###################################
-# rule-providers
-###################################
+    for name in custom_rules:
+        f.write(f"  - RULE-SET,{name},{name}\n")
 
-def gen_providers():
-    txt = ""
-
-    for r in custom_rules:
-        txt += f"""
-  {r}:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/YOUR_REPO/main/rules/{r}.list
-    path: ./ruleset/{r}.yaml
-    interval: 86400
-"""
-
-    txt += """
-  Proxy:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/YOUR_REPO/main/rules/Proxy.list
-    path: ./ruleset/proxy.yaml
-    interval: 86400
-
-  Direct:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/YOUR_REPO/main/rules/Direct.list
-    path: ./ruleset/direct.yaml
-    interval: 86400
-"""
-
-    return txt
-
-###################################
-# rules
-###################################
-
-def gen_rules():
-    rules = []
-
-    for r in custom_rules:
-        rules.append(f"  - RULE-SET,{r},{r}")
-
-    rules += [
-        "  - RULE-SET,Direct,🟢 全球直连",
-        "  - RULE-SET,Proxy,🚀 节点选择",
-        "  - GEOIP,CN,🟢 全球直连,no-resolve",
-        "  - MATCH,🚀 节点选择"
-    ]
-
-    return "\n".join(rules)
-
-###################################
-# 输出
-###################################
-
-os.makedirs("build", exist_ok=True)
-
-with open(OUTPUT, "w") as f:
-    f.write(BASE)
-    f.write("\n")
-    f.write(NODE)
-    f.write("\nproxy-groups:\n")
-    f.write(gen_groups())
-    f.write("\nrule-providers:\n")
-    f.write(gen_providers())
-    f.write("\nrules:\n")
-    f.write(gen_rules())
-
-print("config.yaml 生成完成")
+    f.write("  - RULE-SET,Proxy,🚀 节点选择\n")
+    f.write("  - RULE-SET,Direct,🟢 全球直连\n")
+    f.write("  - MATCH,🚀 节点选择\n")
