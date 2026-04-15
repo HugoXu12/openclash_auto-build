@@ -1,108 +1,106 @@
-#!/bin/bash
-
+#!/usr/bin/env bash
 set -e
 
-RULES_DIR="rules"
-SRC_DIR="rules-src"
+BASE_DIR=$(cd "$(dirname "$0")/.." && pwd)
+RULES_SRC="$BASE_DIR/rules-src"
+RULES_DIR="$BASE_DIR/rules"
+TMP_DIR="$BASE_DIR/tmp"
 
-rm -rf $RULES_DIR
-mkdir -p $RULES_DIR
+mkdir -p "$RULES_DIR" "$TMP_DIR"
 
-TMP_ALL=$(mktemp)
+echo "== 清空旧文件 =="
+rm -rf "$RULES_DIR"/*
+rm -rf "$TMP_DIR"/*
+rm -f "$RULES_SRC/delete_proxy.list"
+rm -f "$RULES_SRC/delete_direct.list"
 
-echo "===> 解析 rules.list"
+RULE_FILE="$RULES_SRC/rules.list"
 
 section=""
+declare -A custom_map
+proxy_links=()
+direct_links=()
 
-while IFS= read -r line || [ -n "$line" ]; do
+echo "== 解析 rules.list =="
+
+while IFS= read -r line || [[ -n "$line" ]]; do
     line=$(echo "$line" | sed 's/\r//g')
 
     [[ -z "$line" || "$line" =~ ^# ]] && continue
 
-    if [[ "$line" =~ \[(.*)\] ]]; then
-        section="${BASH_REMATCH[1]}"
+    if [[ "$line" =~ ^\[.*\]$ ]]; then
+        section="$line"
         continue
     fi
 
-    case $section in
-
-    Custom_link)
-        name=$(echo "$line" | cut -d '|' -f1)
-        url=$(echo "$line" | cut -d '|' -f2)
-
-        echo "===> 下载 Custom: $name"
-
-        curl -s "$url" \
-        | sed 's/#.*//' \
-        | sed '/^\s*$/d' \
-        | sed 's/[ \t]*$//' \
-        > "$RULES_DIR/$name.list"
-
-        cat "$RULES_DIR/$name.list" >> "$TMP_ALL"
-        ;;
-
-    Proxy-src_link)
-        echo "$line" >> proxy_links.tmp
-        ;;
-
-    Direct-src_link)
-        echo "$line" >> direct_links.tmp
-        ;;
-
+    case "$section" in
+        "[Custom_link]")
+            name=$(echo "$line" | cut -d'|' -f1)
+            url=$(echo "$line" | cut -d'|' -f2)
+            custom_map["$name"]="$url"
+            ;;
+        "[Proxy-src_link]")
+            proxy_links+=("$line")
+            ;;
+        "[Direct-src_link]")
+            direct_links+=("$line")
+            ;;
     esac
+done < "$RULE_FILE"
 
-done < "$SRC_DIR/rules.list"
+clean_file() {
+    sed 's/\r//g' | sed 's/#.*//' | sed '/^\s*$/d' | sed 's/[ \t]*$//'
+}
 
-##################################
-# Proxy 汇总
-##################################
+echo "== 生成 Custom RAW =="
 
-> proxy_all.tmp
+custom_raw_files=()
 
-while read -r url; do
-    echo "===> 下载 Proxy: $url"
+for name in "${!custom_map[@]}"; do
+    url=${custom_map[$name]}
+    raw_file="$TMP_DIR/${name}_RAW.list"
 
-    curl -s "$url" \
-    | sed 's/#.*//' \
-    | sed '/^\s*$/d' \
-    | sed 's/[ \t]*$//' \
-    >> proxy_all.tmp
+    echo "下载 $name"
+    curl -sL "$url" | clean_file | sort -u > "$raw_file"
 
-done < proxy_links.tmp
+    cp "$raw_file" "$RULES_DIR/${name}.list"
+    custom_raw_files+=("$raw_file")
+done
 
-cat "$SRC_DIR/Proxy_custom.list" >> proxy_all.tmp
-cat "$SRC_DIR/Direct_custom.list" >> proxy_all.tmp
+echo "== 合并 Proxy RAW =="
 
-##################################
-# Direct 汇总
-##################################
+> "$TMP_DIR/Proxy_RAW.list"
+for url in "${proxy_links[@]}"; do
+    curl -sL "$url" | clean_file >> "$TMP_DIR/Proxy_RAW.list"
+done
 
-> direct_all.tmp
+sort -u "$TMP_DIR/Proxy_RAW.list" -o "$TMP_DIR/Proxy_RAW.list"
 
-while read -r url; do
-    echo "===> 下载 Direct: $url"
+echo "== 合并 Direct RAW =="
 
-    curl -s "$url" \
-    | sed 's/#.*//' \
-    | sed '/^\s*$/d' \
-    | sed 's/[ \t]*$//' \
-    >> direct_all.tmp
+> "$TMP_DIR/Direct_RAW.list"
+for url in "${direct_links[@]}"; do
+    curl -sL "$url" | clean_file >> "$TMP_DIR/Direct_RAW.list"
+done
 
-done < direct_links.tmp
+sort -u "$TMP_DIR/Direct_RAW.list" -o "$TMP_DIR/Direct_RAW.list"
 
-cat "$SRC_DIR/Direct_custom.list" >> direct_all.tmp
-cat "$SRC_DIR/Proxy_custom.list" >> direct_all.tmp
+echo "== 去重处理 =="
 
-##################################
-# 去重逻辑
-##################################
+touch "$RULES_SRC/Proxy_custom.list"
+touch "$RULES_SRC/Direct_custom.list"
 
-sort -u "$TMP_ALL" > custom_all.tmp
+cat "${custom_raw_files[@]}" \
+    "$RULES_SRC/Proxy_custom.list" \
+    "$RULES_SRC/Direct_custom.list" \
+    > "$TMP_DIR/all_known_rules.list"
 
-grep -vxFf custom_all.tmp proxy_all.tmp | sort -u > "$RULES_DIR/Proxy.list"
-grep -Fxf custom_all.tmp proxy_all.tmp > "$RULES_DIR/delete_proxy.list"
+sort -u "$TMP_DIR/all_known_rules.list" -o "$TMP_DIR/all_known_rules.list"
 
-grep -vxFf custom_all.tmp direct_all.tmp | sort -u > "$RULES_DIR/Direct.list"
-grep -Fxf custom_all.tmp direct_all.tmp > "$RULES_DIR/delete_direct.list"
+grep -vxFf "$TMP_DIR/all_known_rules.list" "$TMP_DIR/Proxy_RAW.list" > "$RULES_DIR/Proxy.list" || true
+grep -xFf "$TMP_DIR/all_known_rules.list" "$TMP_DIR/Proxy_RAW.list" > "$RULES_SRC/delete_proxy.list" || true
 
-echo "===> 完成"
+grep -vxFf "$TMP_DIR/all_known_rules.list" "$TMP_DIR/Direct_RAW.list" > "$RULES_DIR/Direct.list" || true
+grep -xFf "$TMP_DIR/all_known_rules.list" "$TMP_DIR/Direct_RAW.list" > "$RULES_SRC/delete_direct.list" || true
+
+echo "== 完成规则生成 =="
