@@ -3,30 +3,25 @@ name: OpenClash Auto Build
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 */6 * * *"
+    - cron: "0 2 * * *"
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: write
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.x
-
       - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y curl
+          sudo apt-get install -y curl python3
 
-      - name: Run merge
+      - name: Run merge script
         run: |
           chmod +x scripts/merge.sh
           bash scripts/merge.sh
@@ -35,11 +30,16 @@ jobs:
         run: |
           python3 scripts/build_yaml.py
 
-      - name: Commit & Push
+      - name: Commit changes
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
-
+          git config --global user.name "auto-bot"
+          git config --global user.email "auto@github.com"
           git add .
-          git commit -m "Auto update rules & config" || echo "No changes"
+          git commit -m "auto update rules" || echo "no changes"
           git push
+
+      # ====== DEBUG 保留（后续你可以删）======
+      # - name: Cleanup debug files
+      #   run: |
+      #     rm -rf rules-src/*_RAW.list
+      #     rm -rf rules-src/delete_*.list
