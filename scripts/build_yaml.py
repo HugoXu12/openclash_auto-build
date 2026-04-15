@@ -1,146 +1,102 @@
 import os
-import re
-import yaml
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(__file__))
 
-RULES_SRC = os.path.join(ROOT, "rules-src", "rules.list")
-RULES_DIR = os.path.join(ROOT, "rules")
-OUT_DIR = os.path.join(ROOT, "build")
-OUT_FILE = os.path.join(OUT_DIR, "config.yaml")
+RULES_LIST = os.path.join(ROOT, "rules-src/rules.list")
+BUILD_DIR = os.path.join(ROOT, "build")
+RULE_DIR = os.path.join(ROOT, "rules")
 
-os.makedirs(OUT_DIR, exist_ok=True)
+BASE = os.path.join(ROOT, "config/base.yaml")
+NODE = os.path.join(ROOT, "config/node.yaml")
 
+os.makedirs(BUILD_DIR, exist_ok=True)
 
-def parse_custom():
-    items = {}
-    with open(RULES_SRC, "r", encoding="utf-8") as f:
-        content = f.read()
+################################
+# 解析 Custom_link
+################################
+custom = []
 
-    block = re.search(r"\[Custom_link\](.*?)\[", content, re.S)
-    if not block:
-        block = re.search(r"\[Custom_link\](.*)", content, re.S)
+with open(RULES_LIST, "r") as f:
+    lines = f.readlines()
 
-    lines = block.group(1).strip().split("\n")
+flag = False
+for line in lines:
+    line = line.strip()
+    if line == "[Custom_link]":
+        flag = True
+        continue
+    if line.startswith("["):
+        flag = False
+    if flag and "|" in line:
+        name = line.split("|")[0].strip()
+        custom.append(name)
 
-    for line in lines:
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        if "|" in line:
-            name, url = line.split("|", 1)
-            items[name.strip()] = url.strip()
+################################
+# 生成 rule-providers
+################################
+providers = ""
 
-    return items
+for name in custom:
+    providers += f"""
+  {name}:
+    type: http
+    behavior: classical
+    url: https://raw.githubusercontent.com/HugoXu12/openclash-rules-auto/main/rules/{name}.list
+    path: ./ruleset/{name}.yaml
+    interval: 86400
+"""
 
+providers += f"""
+  Proxy:
+    type: http
+    behavior: classical
+    url: https://raw.githubusercontent.com/HugoXu12/openclash-rules-auto/main/rules/Proxy.list
+    path: ./ruleset/proxy.yaml
+    interval: 86400
 
-custom = parse_custom()
-names = list(custom.keys())
+  Direct:
+    type: http
+    behavior: classical
+    url: https://raw.githubusercontent.com/HugoXu12/openclash-rules-auto/main/rules/Direct.list
+    path: ./ruleset/direct.yaml
+    interval: 86400
+"""
 
-# -------------------------
-# base config
-# -------------------------
-config = {
-    "port": 7890,
-    "socks-port": 7891,
-    "redir-port": 7892,
-    "mixed-port": 7893,
-    "allow-lan": True,
-    "mode": "rule",
-    "log-level": "info",
-    "ipv6": False,
-}
+################################
+# 生成 rules
+################################
+rules = ""
 
-# -------------------------
-# proxy-groups
-# -------------------------
-proxy_groups = [
-    {
-        "name": "🚀 节点选择",
-        "type": "select",
-        "proxies": ["US-1", "US-2", "UK-1", "UK-2", "HK-1", "HK-2"]
-    },
-    {
-        "name": "♻️ 自动选择",
-        "type": "url-test",
-        "url": "http://www.gstatic.com/generate_204",
-        "interval": 300,
-        "tolerance": 50,
-        "proxies": ["US-1", "US-2", "UK-1", "UK-2", "HK-1", "HK-2"]
-    },
-    {
-        "name": "🟢 全球直连",
-        "type": "select",
-        "proxies": ["DIRECT"]
-    }
-]
+for name in custom:
+    rules += f"  - RULE-SET,{name},{name}\n"
 
-# dynamic groups
-for name in names:
-    proxy_groups.append({
-        "name": name,
-        "type": "select",
-        "icon": f"https://github.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/{name}.png",
-        "proxies": ["♻️ 自动选择", "🚀 节点选择"]
-    })
+rules += """  - RULE-SET,Direct,🟢 全球直连
+  - RULE-SET,Proxy,🚀 节点选择
+  - GEOIP,CN,🟢 全球直连,no-resolve
+  - MATCH,🚀 节点选择
+"""
 
-config["proxy-groups"] = proxy_groups
+################################
+# 拼接 YAML
+################################
+with open(BASE) as f:
+    base = f.read()
 
-# -------------------------
-# rule-providers
-# -------------------------
-rule_providers = {}
+with open(NODE) as f:
+    node = f.read()
 
-for name, url in custom.items():
-    rule_providers[name] = {
-        "type": "http",
-        "behavior": "classical",
-        "url": url,
-        "path": f"./ruleset/{name.lower()}.yaml",
-        "interval": 86400
-    }
+final = f"""{base}
 
-# static rules
-rule_providers.update({
-    "ChinaMedia": {
-        "type": "http",
-        "behavior": "classical",
-        "url": "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/ChinaMedia.list",
-        "path": "./ruleset/chinaMedia.yaml",
-        "interval": 86400
-    },
-    "ProxyGFWlist": {
-        "type": "http",
-        "behavior": "classical",
-        "url": "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/ProxyGFWlist.list",
-        "path": "./ruleset/proxygfw.yaml",
-        "interval": 86400
-    }
-})
+{node}
 
-config["rule-providers"] = rule_providers
+rule-providers:
+{providers}
 
-# -------------------------
-# rules section
-# -------------------------
-rules = []
+rules:
+{rules}
+"""
 
-for name in names:
-    rules.append(f"- RULE-SET,{name},{name}")
+with open(os.path.join(BUILD_DIR, "config.yaml"), "w") as f:
+    f.write(final)
 
-rules += [
-    "- RULE-SET,ChinaMedia,🟢 全球直连",
-    "- RULE-SET,ProxyGFWlist,🚀 节点选择",
-    "- GEOIP,CN,🟢 全球直连,no-resolve",
-    "- MATCH,🚀 节点选择"
-]
-
-config["rules"] = rules
-
-# -------------------------
-# write yaml
-# -------------------------
-with open(OUT_FILE, "w", encoding="utf-8") as f:
-    yaml.dump(config, f, allow_unicode=True, sort_keys=False)
-
-print("Generated:", OUT_FILE)
+print("YAML 生成完成")
