@@ -1,84 +1,92 @@
 #!/bin/bash
-
 set -e
 
-ROOT_DIR=$(pwd)
-SRC_DIR="$ROOT_DIR/rules-src"
-RULES_DIR="$ROOT_DIR/rules"
+ROOT=$(cd "$(dirname "$0")/.." && pwd)
 
-rm -rf "$RULES_DIR"
-mkdir -p "$RULES_DIR"
+RULE_SRC="$ROOT/rules-src"
+RULE_DIR="$ROOT/rules"
 
-echo "== Parsing rules.list =="
+echo "== 清空 rules 目录 =="
+rm -rf "$RULE_DIR"
+mkdir -p "$RULE_DIR"
 
-CUSTOM_FILE="$SRC_DIR/rules.list"
+TMP_DIR=$(mktemp -d)
 
-# ---------------------------
-# 1. Custom_link
-# ---------------------------
-awk '
-/^\[Custom_link\]/ {flag=1; next}
-/^\[/ {flag=0}
-flag && NF {
-    split($0,a,"|");
-    print a[1]"|"a[2]
+################################
+# 通用清洗函数
+################################
+clean_file() {
+  sed 's/#.*//g' "$1" | sed '/^\s*$/d' | sed 's/[ \t]*$//'
 }
-' "$CUSTOM_FILE" | while IFS="|" read -r name url; do
 
-    echo "Downloading $name"
+################################
+# 解析 rules.list
+################################
+CUSTOM_SECTION=$(awk '/\[Custom_link\]/{flag=1;next}/\[/{flag=0}flag' $RULE_SRC/rules.list)
+PROXY_SECTION=$(awk '/\[Proxy-src_link\]/{flag=1;next}/\[/{flag=0}flag' $RULE_SRC/rules.list)
+DIRECT_SECTION=$(awk '/\[Direct-src_link\]/{flag=1;next}/\[/{flag=0}flag' $RULE_SRC/rules.list)
 
-    curl -s "$url" \
-    | sed '/^#/d' \
-    | sed '/^$/d' \
-    | sed 's/[ \t]*$//' \
-    > "$RULES_DIR/$name.list"
+################################
+# 1. 处理 Custom_link
+################################
+echo "== 处理 Custom_link =="
 
+echo "$CUSTOM_SECTION" | while IFS="|" read -r name url
+do
+  [ -z "$name" ] && continue
+  file="$RULE_DIR/${name}.list"
+
+  curl -sL "$url" > "$TMP_DIR/tmp.list"
+  clean_file "$TMP_DIR/tmp.list" > "$file"
 done
 
-# ---------------------------
-# 2. Proxy-src_link
-# ---------------------------
-awk '
-/^\[Proxy-src_link\]/ {flag=1; next}
-/^\[/ {flag=0}
-flag && NF {print $0}
-' "$CUSTOM_FILE" > /tmp/proxy_src.txt
+################################
+# 2. 汇总 Proxy
+################################
+echo "== 处理 Proxy =="
 
-# merge proxy custom
-cat "$SRC_DIR/Proxy_custom.list" >> /tmp/proxy_src.txt
+> "$TMP_DIR/proxy_all.list"
 
-# clean
-cat /tmp/proxy_src.txt \
-| sed '/^#/d' \
-| sed '/^$/d' \
-| sed 's/[ \t]*$//' \
-| sort -u > "$RULES_DIR/Proxy.list"
+for url in $PROXY_SECTION
+do
+  curl -sL "$url" >> "$TMP_DIR/proxy_all.list"
+done
 
-# ---------------------------
-# 3. Direct-src_link
-# ---------------------------
-awk '
-/^\[Direct-src_link\]/ {flag=1; next}
-/^\[/ {flag=0}
-flag && NF {print $0}
-' "$CUSTOM_FILE" > /tmp/direct_src.txt
+# 加入自定义
+cat "$RULE_SRC/Proxy_custom.list" >> "$TMP_DIR/proxy_all.list"
 
-cat "$SRC_DIR/Direct_custom.list" >> /tmp/direct_src.txt
+clean_file "$TMP_DIR/proxy_all.list" | sort -u > "$TMP_DIR/proxy_clean.list"
 
-cat /tmp/direct_src.txt \
-| sed '/^#/d' \
-| sed '/^$/d' \
-| sed 's/[ \t]*$//' \
-| sort -u > "$RULES_DIR/Direct.list"
+################################
+# 3. 汇总 Direct
+################################
+echo "== 处理 Direct =="
 
-# ---------------------------
-# 4. delete lists（差集）
-# ---------------------------
+> "$TMP_DIR/direct_all.list"
 
-comm -23 <(sort "$RULES_DIR/Proxy.list") <(cat "$SRC_DIR/Proxy_custom.list" "$SRC_DIR/Direct_custom.list" | sort -u) \
-> "$RULES_DIR/delete_proxy.list"
+for url in $DIRECT_SECTION
+do
+  curl -sL "$url" >> "$TMP_DIR/direct_all.list"
+done
 
-comm -23 <(sort "$RULES_DIR/Direct.list") <(cat "$SRC_DIR/Proxy_custom.list" "$SRC_DIR/Direct_custom.list" | sort -u) \
-> "$RULES_DIR/delete_direct.list"
+cat "$RULE_SRC/Direct_custom.list" >> "$TMP_DIR/direct_all.list"
 
-echo "Merge done."
+clean_file "$TMP_DIR/direct_all.list" | sort -u > "$TMP_DIR/direct_clean.list"
+
+################################
+# 4. 去重逻辑（核心）
+################################
+
+# Proxy 去掉 Direct + Custom
+cat "$RULE_DIR"/*.list "$TMP_DIR/direct_clean.list" > "$TMP_DIR/exclude_proxy.list"
+
+grep -vxFf "$TMP_DIR/exclude_proxy.list" "$TMP_DIR/proxy_clean.list" > "$RULE_DIR/Proxy.list"
+grep -xFf "$TMP_DIR/exclude_proxy.list" "$TMP_DIR/proxy_clean.list" > "$RULE_DIR/delete_proxy.list"
+
+# Direct 去掉 Proxy + Custom
+cat "$RULE_DIR"/*.list "$TMP_DIR/proxy_clean.list" > "$TMP_DIR/exclude_direct.list"
+
+grep -vxFf "$TMP_DIR/exclude_direct.list" "$TMP_DIR/direct_clean.list" > "$RULE_DIR/Direct.list"
+grep -xFf "$TMP_DIR/exclude_direct.list" "$TMP_DIR/direct_clean.list" > "$RULE_DIR/delete_direct.list"
+
+echo "== 完成 =="
