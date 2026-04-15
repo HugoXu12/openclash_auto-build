@@ -1,68 +1,37 @@
 name: OpenClash Auto Build
 
 on:
+  push:
   workflow_dispatch:
   schedule:
-    - cron: "0 */6 * * *"
-
-permissions:
-  contents: write
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    - cron: '0 */6 * * *'
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+    - name: Init
+      run: |
+        rm -rf rules build
+        mkdir -p rules build
 
-      - name: Debug file structure
-        run: |
-          echo "===== 文件结构 ====="
-          ls -R
+    - name: Run merge
+      run: bash scripts/merge.sh
 
-      - name: Clean build & rules
-        run: |
-          rm -rf rules build
-          mkdir -p rules build
+    - name: Generate YAML
+      run: python3 scripts/build_yaml.py
 
-      - name: Check required files
-        run: |
-          test -f rules-src/rules.list || (echo "rules.list missing" && exit 1)
-          touch rules-src/Proxy_custom.list
-          touch rules-src/Direct_custom.list
-
-      - name: Run merge
-        run: |
-          chmod +x scripts/merge.sh
-          bash -x scripts/merge.sh
-
-      - name: Check rules output
-        run: |
-          echo "===== rules 结果 ====="
-          ls -l rules
-
-      - name: Build YAML
-        run: |
-          python3 scripts/build_yaml.py
-
-      - name: Check build output
-        run: |
-          ls -l build
-
-      - name: Commit & Push
-        run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
-
-          git add .
-          git commit -m "auto update rules" || echo "no changes"
-          git push
+    - name: Commit
+      run: |
+        git config user.name "github-actions"
+        git config user.email "actions@github.com"
+        git add .
+        git commit -m "auto build" || echo "no changes"
+        git push
