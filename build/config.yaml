@@ -1,35 +1,7 @@
 port: 7890
 socks-port: 7891
-redir-port: 7892
-mixed-port: 7893
 allow-lan: true
 mode: rule
-log-level: info
-ipv6: false
-
-
-################################
-# DNS（防污染核心）
-################################
-dns:
-  enable: true
-  cache-algorithm: arc
-  listen: 0.0.0.0:1053
-  ipv6: false
-  respect-rules: true
-  enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.1/16
-  fake-ip-filter-mode: blacklist
-  fake-ip-filter:
-    - "rule-set:fakeipfilter_domain"
-  default-nameserver:
-    - https://223.5.5.5/dns-query
-  proxy-server-nameserver:
-    - https://dns.alidns.com/dns-query
-    - https://doh.pub/dns-query
-  nameserver:
-    - https://dns.alidns.com/dns-query
-    - https://doh.pub/dns-query
 
 proxies:
   - {name: US-1, type: ss, server: 1.1.1.1, port: 1000, cipher: aes-128-gcm, password: 123456}
@@ -40,99 +12,36 @@ proxies:
   - {name: HK-2, type: ss, server: 3.3.3.2, port: 1000, cipher: aes-128-gcm, password: 123456}
 
 proxy-groups:
-
   - name: 🚀 节点选择
     type: select
-    proxies:
-      - US-1
-      - US-2
-      - UK-1
-      - UK-2
-      - HK-1
-      - HK-2
-
-
-  - name: ♻️ 自动选择
-    type: url-test
-    proxies:
-      - US-1
-      - US-2
-      - UK-1
-      - UK-2
-      - HK-1
-      - HK-2
-    url: http://www.gstatic.com/generate_204
-    interval: 300
-
+    proxies: [US-1, US-2, UK-1, UK-2, HK-1, HK-2]
 
   - name: 🟢 全球直连
     type: select
-    proxies:
-      - DIRECT
+    proxies: [DIRECT]
 
+  - name: ♻️ 自动选择
+    type: url-test
+    proxies: [US-1, US-2, UK-1, UK-2, HK-1, HK-2]
+    url: http://www.gstatic.com/generate_204
+    interval: 300
 
   - name: Google
     type: select
-    proxies:
-      - ♻️ 自动选择
-      - 🚀 节点选择
-
+    proxies: [🚀 节点选择, ♻️ 自动选择, 🟢 全球直连]
 
   - name: YouTube
     type: select
-    proxies:
-      - ♻️ 自动选择
-      - 🚀 节点选择
-
+    proxies: [🚀 节点选择, ♻️ 自动选择, 🟢 全球直连]
 
   - name: AI
     type: select
-    proxies:
-      - ♻️ 自动选择
-      - 🚀 节点选择
-
-rule-providers:
-
-  Google:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/YOUR_REPO/main/rules/Google.list
-    path: ./ruleset/Google.yaml
-    interval: 86400
-
-  YouTube:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/YOUR_REPO/main/rules/YouTube.list
-    path: ./ruleset/YouTube.yaml
-    interval: 86400
-
-  AI:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/YOUR_REPO/main/rules/AI.list
-    path: ./ruleset/AI.yaml
-    interval: 86400
-
-  Proxy:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/YOUR_REPO/main/rules/Proxy.list
-    path: ./ruleset/proxy.yaml
-    interval: 86400
-
-  Direct:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/YOUR_REPO/main/rules/Direct.list
-    path: ./ruleset/direct.yaml
-    interval: 86400
+    proxies: [🚀 节点选择, ♻️ 自动选择, 🟢 全球直连]
 
 rules:
   - RULE-SET,Google,Google
   - RULE-SET,YouTube,YouTube
   - RULE-SET,AI,AI
-  - RULE-SET,Direct,🟢 全球直连
   - RULE-SET,Proxy,🚀 节点选择
-  - GEOIP,CN,🟢 全球直连,no-resolve
+  - RULE-SET,Direct,🟢 全球直连
   - MATCH,🚀 节点选择
