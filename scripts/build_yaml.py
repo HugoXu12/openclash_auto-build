@@ -1,102 +1,146 @@
 import os
 
-ROOT = os.path.dirname(os.path.dirname(__file__))
+RULES_LIST = "rules-src/rules.list"
+OUTPUT = "build/config.yaml"
 
-RULES_LIST = os.path.join(ROOT, "rules-src/rules.list")
-BUILD_DIR = os.path.join(ROOT, "build")
-RULE_DIR = os.path.join(ROOT, "rules")
+BASE = open("config/base.yaml").read()
+NODE = open("config/node.yaml").read()
 
-BASE = os.path.join(ROOT, "config/base.yaml")
-NODE = os.path.join(ROOT, "config/node.yaml")
+custom_rules = []
 
-os.makedirs(BUILD_DIR, exist_ok=True)
+section = None
 
-################################
-# 解析 Custom_link
-################################
-custom = []
+with open(RULES_LIST) as f:
+    for line in f:
+        line = line.strip()
 
-with open(RULES_LIST, "r") as f:
-    lines = f.readlines()
+        if not line or line.startswith("#"):
+            continue
 
-flag = False
-for line in lines:
-    line = line.strip()
-    if line == "[Custom_link]":
-        flag = True
-        continue
-    if line.startswith("["):
-        flag = False
-    if flag and "|" in line:
-        name = line.split("|")[0].strip()
-        custom.append(name)
+        if line.startswith("["):
+            section = line.strip("[]")
+            continue
 
-################################
-# 生成 rule-providers
-################################
-providers = ""
+        if section == "Custom_link":
+            name = line.split("|")[0]
+            custom_rules.append(name)
 
-for name in custom:
-    providers += f"""
-  {name}:
+###################################
+# 生成 proxy-groups
+###################################
+
+def gen_groups():
+    groups = []
+
+    base_group = f"""
+  - name: 🚀 节点选择
+    type: select
+    proxies:
+"""
+    # 提取节点名称
+    nodes = []
+    for line in NODE.splitlines():
+        if "name:" in line:
+            n = line.split("name:")[1].split(",")[0].strip()
+            nodes.append(n)
+
+    for n in nodes:
+        base_group += f"      - {n}\n"
+
+    auto_group = base_group.replace("select", "url-test")
+    auto_group = auto_group.replace("🚀 节点选择", "♻️ 自动选择")
+    auto_group += "    url: http://www.gstatic.com/generate_204\n    interval: 300\n"
+
+    groups.append(base_group)
+    groups.append(auto_group)
+
+    groups.append("""
+  - name: 🟢 全球直连
+    type: select
+    proxies:
+      - DIRECT
+""")
+
+    for r in custom_rules:
+        groups.append(f"""
+  - name: {r}
+    type: select
+    proxies:
+      - ♻️ 自动选择
+      - 🚀 节点选择
+""")
+
+    return "\n".join(groups)
+
+###################################
+# rule-providers
+###################################
+
+def gen_providers():
+    txt = ""
+
+    for r in custom_rules:
+        txt += f"""
+  {r}:
     type: http
     behavior: classical
-    url: https://raw.githubusercontent.com/HugoXu12/openclash-rules-auto/main/rules/{name}.list
-    path: ./ruleset/{name}.yaml
+    url: https://raw.githubusercontent.com/YOUR_REPO/main/rules/{r}.list
+    path: ./ruleset/{r}.yaml
     interval: 86400
 """
 
-providers += f"""
+    txt += """
   Proxy:
     type: http
     behavior: classical
-    url: https://raw.githubusercontent.com/HugoXu12/openclash-rules-auto/main/rules/Proxy.list
+    url: https://raw.githubusercontent.com/YOUR_REPO/main/rules/Proxy.list
     path: ./ruleset/proxy.yaml
     interval: 86400
 
   Direct:
     type: http
     behavior: classical
-    url: https://raw.githubusercontent.com/HugoXu12/openclash-rules-auto/main/rules/Direct.list
+    url: https://raw.githubusercontent.com/YOUR_REPO/main/rules/Direct.list
     path: ./ruleset/direct.yaml
     interval: 86400
 """
 
-################################
-# 生成 rules
-################################
-rules = ""
+    return txt
 
-for name in custom:
-    rules += f"  - RULE-SET,{name},{name}\n"
+###################################
+# rules
+###################################
 
-rules += """  - RULE-SET,Direct,🟢 全球直连
-  - RULE-SET,Proxy,🚀 节点选择
-  - GEOIP,CN,🟢 全球直连,no-resolve
-  - MATCH,🚀 节点选择
-"""
+def gen_rules():
+    rules = []
 
-################################
-# 拼接 YAML
-################################
-with open(BASE) as f:
-    base = f.read()
+    for r in custom_rules:
+        rules.append(f"  - RULE-SET,{r},{r}")
 
-with open(NODE) as f:
-    node = f.read()
+    rules += [
+        "  - RULE-SET,Direct,🟢 全球直连",
+        "  - RULE-SET,Proxy,🚀 节点选择",
+        "  - GEOIP,CN,🟢 全球直连,no-resolve",
+        "  - MATCH,🚀 节点选择"
+    ]
 
-final = f"""{base}
+    return "\n".join(rules)
 
-{node}
+###################################
+# 输出
+###################################
 
-rule-providers:
-{providers}
+os.makedirs("build", exist_ok=True)
 
-rules:
-{rules}
-"""
+with open(OUTPUT, "w") as f:
+    f.write(BASE)
+    f.write("\n")
+    f.write(NODE)
+    f.write("\nproxy-groups:\n")
+    f.write(gen_groups())
+    f.write("\nrule-providers:\n")
+    f.write(gen_providers())
+    f.write("\nrules:\n")
+    f.write(gen_rules())
 
-with open(os.path.join(BUILD_DIR, "config.yaml"), "w") as f:
-    f.write(final)
-
-print("YAML 生成完成")
+print("config.yaml 生成完成")
