@@ -1,6 +1,5 @@
 #!/bin/bash
-
-set -e
+set -ex
 
 SRC_DIR="rules-src"
 TMP_DIR="rules-src-provisional"
