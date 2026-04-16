@@ -1,113 +1,86 @@
 #!/bin/bash
 
-set -eo pipefail
-set -x  # 开启调试日志（非常重要）
+set -e
 
-BASE_DIR=$(cd "$(dirname "$0")/.." && pwd)
-RULES_SRC="$BASE_DIR/rules-src"
-RULES_DIR="$BASE_DIR/rules"
+SRC_DIR="rules-src"
+TMP_DIR="rules-src-provisional"
+OUT_DIR="rules"
 
-mkdir -p "$RULES_SRC"
-mkdir -p "$RULES_DIR"
+RULE_FILE="$SRC_DIR/rules.list"
 
-echo "===> 清空 rules 目录"
-rm -rf "$RULES_DIR"
-mkdir -p "$RULES_DIR"
-
-# 清洗函数
-clean_list() {
-    sed 's/#.*//g' "$1" | sed '/^\s*$/d' | sed 's/[ \t]*$//' || true
+# ========= 通用清洗函数 =========
+clean_file() {
+    sed 's/#.*//g' "$1" | sed '/^\s*$/d' | sed 's/[ \t]*$//' | sort -u
 }
 
-# 解析 rules.list（稳定版）
-parse_section() {
-    awk -v section="$1" '
-    $0 ~ "\\["section"\\]" {flag=1; next}
-    /^\[/ {flag=0}
-    flag && NF
-    ' "$RULES_SRC/rules.list" || true
-}
+# ========= Step 7 =========
+clean_file "$SRC_DIR/Proxy_custom.list" > "$TMP_DIR/Proxy_custom_RAW.list"
 
-CUSTOM_LINKS=$(parse_section "Custom_link")
-PROXY_LINKS=$(parse_section "Proxy-src_link")
-DIRECT_LINKS=$(parse_section "Direct-src_link")
+# ========= Step 8 =========
+clean_file "$SRC_DIR/Direct_custom.list" > "$TMP_DIR/Direct_custom_RAW.list"
 
-echo "===> 下载 Custom_link 规则"
+# ========= 解析 rules.list =========
+section=""
+while read -r line; do
+    [[ -z "$line" || "$line" =~ ^# ]] && continue
 
-echo "$CUSTOM_LINKS" | while IFS="|" read -r name url
-do
-    [ -z "$name" ] && continue
-
-    echo "处理 $name"
-
-    RAW_FILE="$RULES_SRC/${name}_RAW.list"
-
-    curl -L --retry 3 --connect-timeout 10 -s "$url" -o "$RAW_FILE" \
-        || echo "❌ 下载失败: $url"
-
-    if [ -f "$RAW_FILE" ]; then
-        clean_list "$RAW_FILE" | sort -u > "${RAW_FILE}.tmp" || true
-        mv "${RAW_FILE}.tmp" "$RAW_FILE" || true
-        cp "$RAW_FILE" "$RULES_DIR/${name}.list" || true
-    else
-        echo "⚠️ 文件不存在: $RAW_FILE"
+    if [[ "$line" =~ \[.*\] ]]; then
+        section="$line"
+        continue
     fi
 
+    case "$section" in
+        "[Custom_link]")
+            name=$(echo "$line" | cut -d '|' -f1)
+            url=$(echo "$line" | cut -d '|' -f2)
+
+            curl -sL "$url" | clean_file /dev/stdin > "$TMP_DIR/${name}_RAW.list"
+            ;;
+
+        "[Proxy-src_link]")
+            curl -sL "$line" >> "$TMP_DIR/Proxy_RAW.tmp"
+            ;;
+
+        "[Direct-src_link]")
+            curl -sL "$line" >> "$TMP_DIR/Direct_RAW.tmp"
+            ;;
+    esac
+done < "$RULE_FILE"
+
+# ========= Step 10 =========
+clean_file "$TMP_DIR/Proxy_RAW.tmp" > "$TMP_DIR/Proxy_RAW.list"
+
+# ========= Step 11 =========
+clean_file "$TMP_DIR/Direct_RAW.tmp" > "$TMP_DIR/Direct_RAW.list"
+
+# ========= Step 12 =========
+cat \
+  "$TMP_DIR/Proxy_custom_RAW.list" \
+  "$TMP_DIR/Direct_custom_RAW.list" \
+  "$TMP_DIR/"*_RAW.list \
+  | sort -u > "$TMP_DIR/Proxy_exclude.list"
+
+# ========= Step 13 =========
+cat \
+  "$TMP_DIR/Proxy_RAW.list" \
+  "$TMP_DIR/Proxy_exclude.list" \
+  | sort -u > "$TMP_DIR/Direct_exclude.list"
+
+# ========= Step 14 =========
+grep -vxFf "$TMP_DIR/Proxy_exclude.list" "$TMP_DIR/Proxy_RAW.list" > "$OUT_DIR/Proxy.list"
+grep -xFf "$TMP_DIR/Proxy_exclude.list" "$TMP_DIR/Proxy_RAW.list" > "$TMP_DIR/delete_proxy.list"
+
+# ========= Step 15 =========
+grep -vxFf "$TMP_DIR/Direct_exclude.list" "$TMP_DIR/Direct_RAW.list" > "$OUT_DIR/Direct.list"
+grep -xFf "$TMP_DIR/Direct_exclude.list" "$TMP_DIR/Direct_RAW.list" > "$TMP_DIR/delete_direct.list"
+
+# ========= Step 16 =========
+for file in "$TMP_DIR/"*_RAW.list; do
+    name=$(basename "$file" _RAW.list)
+    case "$name" in
+        Proxy*|Direct*) continue ;;
+    esac
+    cp "$file" "$OUT_DIR/${name}.list"
 done
 
-echo "===> 合并 Proxy RAW"
-> "$RULES_SRC/Proxy_RAW.list"
-
-for url in $PROXY_LINKS
-do
-    curl -L --retry 3 --connect-timeout 10 -s "$url" >> "$RULES_SRC/Proxy_RAW.list" \
-        || echo "❌ Proxy 下载失败: $url"
-    echo "" >> "$RULES_SRC/Proxy_RAW.list"
-done
-
-clean_list "$RULES_SRC/Proxy_RAW.list" | sort -u > "$RULES_SRC/Proxy_RAW.tmp" || true
-mv "$RULES_SRC/Proxy_RAW.tmp" "$RULES_SRC/Proxy_RAW.list" || true
-
-echo "===> 合并 Direct RAW"
-> "$RULES_SRC/Direct_RAW.list"
-
-for url in $DIRECT_LINKS
-do
-    curl -L --retry 3 --connect-timeout 10 -s "$url" >> "$RULES_SRC/Direct_RAW.list" \
-        || echo "❌ Direct 下载失败: $url"
-    echo "" >> "$RULES_SRC/Direct_RAW.list"
-done
-
-clean_list "$RULES_SRC/Direct_RAW.list" | sort -u > "$RULES_SRC/Direct_RAW.tmp" || true
-mv "$RULES_SRC/Direct_RAW.tmp" "$RULES_SRC/Direct_RAW.list" || true
-
-echo "===> 生成 Proxy_exclude"
-cat "$RULES_SRC"/*_RAW.list \
-    "$RULES_SRC/Proxy_custom.list" \
-    "$RULES_SRC/Direct_custom.list" \
-    2>/dev/null | sort -u > "$RULES_SRC/Proxy_exclude.list" || true
-
-echo "===> 生成 Proxy.list"
-
-grep -vxFf "$RULES_SRC/Proxy_exclude.list" "$RULES_SRC/Proxy_RAW.list" \
-    > "$RULES_DIR/Proxy.list" || true
-
-grep -xFf "$RULES_SRC/Proxy_exclude.list" "$RULES_SRC/Proxy_RAW.list" \
-    > "$RULES_SRC/delete_proxy.list" || true
-
-echo "===> 生成 Direct_exclude"
-
-cat "$RULES_SRC/Proxy_exclude.list" \
-    "$RULES_SRC/Direct_custom.list" \
-    "$RULES_DIR/Proxy.list" \
-    2>/dev/null | sort -u > "$RULES_SRC/Direct_exclude.list" || true
-
-echo "===> 生成 Direct.list"
-
-grep -vxFf "$RULES_SRC/Direct_exclude.list" "$RULES_SRC/Direct_RAW.list" \
-    > "$RULES_DIR/Direct.list" || true
-
-grep -xFf "$RULES_SRC/Direct_exclude.list" "$RULES_SRC/Direct_RAW.list" \
-    > "$RULES_SRC/delete_direct.list" || true
-
-echo "✅ merge 完成"
+echo "Merge completed"
