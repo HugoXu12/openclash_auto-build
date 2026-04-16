@@ -782,7 +782,6 @@ DOMAIN-SUFFIX,time.android.com
 DOMAIN-SUFFIX,time.apple.com
 DOMAIN-SUFFIX,time.google.com
 DOMAIN-SUFFIX,time.nist.gov
-DOMAIN-SUFFIX,time.window.com
 DOMAIN-SUFFIX,time.windows.com
 DOMAIN-SUFFIX,trae.ai
 DOMAIN-SUFFIX,ttwebview.com
@@ -845,7 +844,6 @@ DOMAIN-SUFFIX,yt.be
 DOMAIN-SUFFIX,ytimg.com
 DOMAIN-SUFFIX,zukunftswerkstatt.de
 DOMAIN-SUFFIX,zynamics.com
-DOMAIN-WILDCARD,time.*.apple.com
 DST-PORT,123/UDP
 IP-CIDR,103.87.204.0/22,no-resolve
 IP-CIDR,108.175.32.0/20,no-resolve
