@@ -29,15 +29,10 @@ proxy-groups:
     type: select
     proxies: [🚀 节点选择, DIRECT]
 
-  - name: Netflix
-    type: select
-    proxies: [🚀 节点选择, DIRECT]
-
 rules:
   - RULE-SET,Google,Google
   - RULE-SET,YouTube,YouTube
   - RULE-SET,AI,AI
-  - RULE-SET,Netflix,Netflix
   - RULE-SET,Direct_custom,DIRECT
   - RULE-SET,Proxy_custom,🚀 节点选择
   - RULE-SET,Direct,DIRECT
