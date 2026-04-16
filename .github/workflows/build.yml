@@ -1,49 +1,41 @@
-name: Auto Build OpenClash Rules and Config
+name: OpenClash Auto Build
 
 on:
-  workflow_dispatch: # 允许随时手动触发
   schedule:
-    - cron: '0 18 * * *' # UTC 18:00，对应北京时间每天凌晨 02:00
+    - cron: '0 18 * * *'   # 北京时间 2点（UTC+8）
+  workflow_dispatch:
 
 permissions:
-  contents: write # 赋予 Action 写入并推送到仓库的权限
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
+      - name: Install
+        run: sudo apt-get install -y curl
 
-      - name: Make script executable
-        run: chmod +x scripts/merge.sh
-
-      - name: Process Rules (merge.sh)
-        run: ./scripts/merge.sh
-
-      - name: Generate config.yaml (build_yaml.py)
-        env:
-          GITHUB_REPOSITORY: ${{ github.repository }}
-        run: python scripts/build_yaml.py
-
-      - name: Commit and Push Changes
+      - name: Run merge
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add rules/ rules-src-provisional/ build/
-          git commit -m "Auto update rules and config.yaml" || exit 0
+          chmod +x scripts/merge.sh
+          bash scripts/merge.sh
+
+      - name: Build YAML
+        run: python3 scripts/build_yaml.py
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add .
+          git commit -m "auto build" || echo "no changes"
           git push
 
-      # 为了方便 debug，已注释掉中间文件的删除步骤。不需要 debug 时可以去掉前面的 #。
-      # - name: Clean up provisional files
+      # 调试用（后续你可以删除）
+      # - name: Cleanup debug files
       #   run: |
       #     rm -rf rules-src-provisional
-      #     git add rules-src-provisional
-      #     git commit -m "chore: clean up provisional files" || exit 0
-      #     git push
