@@ -2,6 +2,7 @@ port: 7890
 socks-port: 7891
 allow-lan: true
 mode: rule
+log-level: info
 
 proxies:
   - {name: US-1, type: ss, server: 1.1.1.1, port: 1000, cipher: aes-128-gcm, password: 123456}
@@ -16,37 +17,29 @@ proxy-groups:
     type: select
     proxies: [US-1, US-2, UK-1, UK-2, HK-1, HK-2]
 
-  - name: 🟢 全球直连
-    type: select
-    proxies: [DIRECT]
-
-  - name: ♻️ 自动选择
-    type: url-test
-    proxies: [US-1, US-2, UK-1, UK-2, HK-1, HK-2]
-    url: http://www.gstatic.com/generate_204
-    interval: 300
-
   - name: Google
     type: select
-    proxies: [🚀 节点选择, ♻️ 自动选择, 🟢 全球直连]
+    proxies: [🚀 节点选择, DIRECT]
 
   - name: YouTube
     type: select
-    proxies: [🚀 节点选择, ♻️ 自动选择, 🟢 全球直连]
+    proxies: [🚀 节点选择, DIRECT]
 
   - name: AI
     type: select
-    proxies: [🚀 节点选择, ♻️ 自动选择, 🟢 全球直连]
+    proxies: [🚀 节点选择, DIRECT]
 
   - name: Netflix
     type: select
-    proxies: [🚀 节点选择, ♻️ 自动选择, 🟢 全球直连]
+    proxies: [🚀 节点选择, DIRECT]
 
 rules:
   - RULE-SET,Google,Google
   - RULE-SET,YouTube,YouTube
   - RULE-SET,AI,AI
   - RULE-SET,Netflix,Netflix
+  - RULE-SET,Direct_custom,DIRECT
+  - RULE-SET,Proxy_custom,🚀 节点选择
+  - RULE-SET,Direct,DIRECT
   - RULE-SET,Proxy,🚀 节点选择
-  - RULE-SET,Direct,🟢 全球直连
   - MATCH,🚀 节点选择
