@@ -32,7 +32,8 @@ jobs:
       - name: Run merge script
         run: |
           chmod +x scripts/merge.sh
-          bash scripts/merge.sh
+          bash -x scripts/merge.sh
+
 
       - name: Build YAML
         run: |
