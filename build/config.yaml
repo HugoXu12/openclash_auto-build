@@ -34,153 +34,143 @@ dns:
 
 proxies:
   - name: US-1
-  type: ss
-  server: 1.1.1.1
-  port: 1000
-  cipher: aes-128-gcm
-  password: 123456
+    type: ss
+    server: 1.1.1.1
+    port: 1000
+    cipher: aes-128-gcm
+    password: 123456
 
-
-proxy-groups:
   - name: US-2
-  type: ss
-  server: 1.1.1.2
-  port: 1000
-  cipher: aes-128-gcm
-  password: 123456
+    type: ss
+    server: 1.1.1.2
+    port: 1000
+    cipher: aes-128-gcm
+    password: 123456
 
-
-proxy-groups:
   - name: UK-1
-  type: ss
-  server: 2.2.2.1
-  port: 1000
-  cipher: aes-128-gcm
-  password: 123456
+    type: ss
+    server: 2.2.2.1
+    port: 1000
+    cipher: aes-128-gcm
+    password: 123456
 
-
-proxy-groups:
   - name: UK-2
-  type: ss
-  server: 2.2.2.2
-  port: 1000
-  cipher: aes-128-gcm
-  password: 123456
+    type: ss
+    server: 2.2.2.2
+    port: 1000
+    cipher: aes-128-gcm
+    password: 123456
 
-
-proxy-groups:
   - name: HK-1
-  type: ss
-  server: 3.3.3.1
-  port: 1000
-  cipher: aes-128-gcm
-  password: 123456
+    type: ss
+    server: 3.3.3.1
+    port: 1000
+    cipher: aes-128-gcm
+    password: 123456
 
-
-proxy-groups:
   - name: HK-2
-  type: ss
-  server: 3.3.3.1
-  port: 1000
-  cipher: aes-128-gcm
-  password: 123456
+    type: ss
+    server: 3.3.3.1
+    port: 1000
+    cipher: aes-128-gcm
+    password: 123456
 
 
 proxy-groups:
-- name: 🚀 节点选择
-  type: select
-  proxies:
-  - US-1
-  - US-2
-  - UK-1
-  - UK-2
-  - HK-1
-  - HK-2
+  - name: 🚀 节点选择
+    type: select
+    proxies:
+    - US-1
+    - US-2
+    - UK-1
+    - UK-2
+    - HK-1
+    - HK-2
 
-- name: ♻️ 自动选择
-  type: url-test
-  proxies:
-  - US-1
-  - US-2
-  - UK-1
-  - UK-2
-  - HK-1
-  - HK-2
-  url: http://www.gstatic.com/generate_204
-  interval: 300
-  tolerance: 50
+  - name: ♻️ 自动选择
+    type: url-test
+    proxies:
+    - US-1
+    - US-2
+    - UK-1
+    - UK-2
+    - HK-1
+    - HK-2
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
 
-- name: 🟢 全球直连
-  type: select
-  proxies:
-  - DIRECT
+  - name: 🟢 全球直连
+    type: select
+    proxies:
+    - DIRECT
 
-- name: Google
-  type: select
-  proxies:
-  - ♻️ 自动选择
-  - 🚀 节点选择
-  icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/Google.png
+  - name: Google
+    type: select
+    proxies:
+    - ♻️ 自动选择
+    - 🚀 节点选择
+    icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/Google.png
 
-- name: YouTube
-  type: select
-  proxies:
-  - ♻️ 自动选择
-  - 🚀 节点选择
-  icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/YouTube.png
+  - name: YouTube
+    type: select
+    proxies:
+    - ♻️ 自动选择
+    - 🚀 节点选择
+    icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/YouTube.png
 
-- name: AI
-  type: select
-  proxies:
-  - ♻️ 自动选择
-  - 🚀 节点选择
-  icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/AI.png
+  - name: AI
+    type: select
+    proxies:
+    - ♻️ 自动选择
+    - 🚀 节点选择
+    icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/AI.png
 
-- name: Netflix
-  type: select
-  proxies:
-  - ♻️ 自动选择
-  - 🚀 节点选择
-  icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/Netflix_b.png
+  - name: Netflix
+    type: select
+    proxies:
+    - ♻️ 自动选择
+    - 🚀 节点选择
+    icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/Netflix_b.png
 
 
 rule-providers:
-Google:
+  Google:
   type: http
   behavior: classical
   url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/Google.list
   path: ./ruleset/google.yaml
   interval: 86400
 
-YouTube:
+  YouTube:
   type: http
   behavior: classical
   url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/YouTube.list
   path: ./ruleset/youtube.yaml
   interval: 86400
 
-AI:
+  AI:
   type: http
   behavior: classical
   url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/AI.list
   path: ./ruleset/ai.yaml
   interval: 86400
 
-Netflix:
+  Netflix:
   type: http
   behavior: classical
   url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/Netflix.list
   path: ./ruleset/netflix.yaml
   interval: 86400
 
-Proxy:
+  Proxy:
   type: http
   behavior: classical
   url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/Proxy.list
   path: ./ruleset/proxy.yaml
   interval: 86400
 
-Direct:
+  Direct:
   type: http
   behavior: classical
   url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/Direct.list
