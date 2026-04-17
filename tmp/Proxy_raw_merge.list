@@ -1,0 +1,66 @@
+# DOMAIN:完全匹配域名，例如 DOMAIN,google.com 匹配 google.com，但不匹配 www.google.com。
+# DOMAIN-SUFFIX:匹配域名后缀，例如 DOMAIN-SUFFIX,google.com 匹配 google.com 和 www.google.com。
+# DOMAIN-KEYWORD:关键词匹配域名，例如 DOMAIN-KEYWORD,google 匹配 google.com 和 google.jp。
+# DOMAIN-WILDCARD:使用通配符匹配域名，支持 * 和 ?，例如 DOMAIN-WILDCARD,*.google.com 匹配 www.google.com 和 mail.google.com。其中 * 匹配任意数量的字符，? 匹配一个字符。
+# DOMAIN-REGEX:使用正则表达式匹配域名，例如 DOMAIN-REGEX,^.*\.google\.com$ 匹配 www.google.com 和 mail.google.com。
+# GEOIP:通过 MaxMind GeoIP 匹配国家代码，例如 GEOIP,CN。可添加 no-resolve 以避免触发 DNS 解析
+
+# 待添加
+#DOMAIN-SUFFIX,myhd.pro
+# Telegram
+#PROCESS-NAME,Telegram.exe
+#PROCESS-NAME,org.telegram.messenger
+DOMAIN-SUFFIX,t.me
+DOMAIN-SUFFIX,tdesktop.com
+DOMAIN-SUFFIX,telegra.ph
+DOMAIN-SUFFIX,telegram.me
+DOMAIN-SUFFIX,telegram.org
+DOMAIN-SUFFIX,telesco.pe
+IP-CIDR,91.108.0.0/16,no-resolve
+IP-CIDR,95.161.64.0/20,no-resolve
+IP-CIDR,109.239.140.0/24,no-resolve
+IP-CIDR,149.154.160.0/20,no-resolve
+IP-CIDR6,2001:67c:4e8::/48,no-resolve
+IP-CIDR6,2001:b28:f23d::/48,no-resolve
+IP-CIDR6,2001:b28:f23f::/48,no-resolve
+# NAME: TikTok
+# AUTHOR: blackmatrix7
+# REPO: https://github.com/blackmatrix7/ios_rule_script
+# UPDATED: 2025-08-10 02:08:00
+# DOMAIN: 4
+# DOMAIN-KEYWORD: 2
+# DOMAIN-SUFFIX: 25
+# PROCESS-NAME: 1
+# TOTAL: 32
+DOMAIN,lf16-effectcdn.byteeffecttos-g.com
+DOMAIN,lf16-pkgcdn.pitaya-clientai.com
+DOMAIN,p16-tiktokcdn-com.akamaized.net
+DOMAIN,trae-api-sg.mchost.guru
+DOMAIN-SUFFIX,bytedapm.com
+DOMAIN-SUFFIX,bytegecko-i18n.com
+DOMAIN-SUFFIX,byteintlapi.com
+DOMAIN-SUFFIX,byteoversea.com
+DOMAIN-SUFFIX,capcut.com
+DOMAIN-SUFFIX,ibytedtos.com
+DOMAIN-SUFFIX,ibyteimg.com
+DOMAIN-SUFFIX,ipstatp.com
+DOMAIN-SUFFIX,isnssdk.com
+DOMAIN-SUFFIX,marscode.com
+DOMAIN-SUFFIX,muscdn.com
+DOMAIN-SUFFIX,musical.ly
+DOMAIN-SUFFIX,sgpstatp.com
+DOMAIN-SUFFIX,snssdk.com
+DOMAIN-SUFFIX,tik-tokapi.com
+DOMAIN-SUFFIX,tiktok.com
+DOMAIN-SUFFIX,tiktokcdn-us.com
+DOMAIN-SUFFIX,tiktokcdn.com
+DOMAIN-SUFFIX,tiktokd.net
+DOMAIN-SUFFIX,tiktokd.org
+DOMAIN-SUFFIX,tiktokmusic.app
+DOMAIN-SUFFIX,tiktokv.com
+DOMAIN-SUFFIX,tiktokv.us
+DOMAIN-SUFFIX,trae.ai
+DOMAIN-SUFFIX,ttwebview.com
+DOMAIN-KEYWORD,musical.ly
+DOMAIN-KEYWORD,tiktok
+PROCESS-NAME,com.zhiliaoapp.musically
