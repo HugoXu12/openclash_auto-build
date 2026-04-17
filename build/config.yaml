@@ -6,6 +6,11 @@ allow-lan: true
 mode: rule
 log-level: info
 ipv6: false
+
+
+################################
+# DNS（防污染核心）
+################################
 dns:
   enable: true
   cache-algorithm: arc
@@ -16,52 +21,38 @@ dns:
   fake-ip-range: 198.18.0.1/16
   fake-ip-filter-mode: blacklist
   fake-ip-filter:
-  - rule-set:fakeipfilter_domain
+    - "rule-set:fakeipfilter_domain"
   default-nameserver:
-  - https://223.5.5.5/dns-query
+    - https://223.5.5.5/dns-query
   proxy-server-nameserver:
-  - https://dns.alidns.com/dns-query
-  - https://doh.pub/dns-query
+    - https://dns.alidns.com/dns-query
+    - https://doh.pub/dns-query
   nameserver:
-  - https://dns.alidns.com/dns-query
-  - https://doh.pub/dns-query
+    - https://dns.alidns.com/dns-query
+    - https://doh.pub/dns-query
+
+
+
 proxies:
-- name: US-1
-  type: ss
-  server: 1.1.1.1
-  port: 1000
-  cipher: aes-128-gcm
-  password: 123456
-- name: US-2
-  type: ss
-  server: 1.1.1.2
-  port: 1000
-  cipher: aes-128-gcm
-  password: 123456
-- name: UK-1
-  type: ss
-  server: 2.2.2.1
-  port: 1000
-  cipher: aes-128-gcm
-  password: 123456
-- name: UK-2
-  type: ss
-  server: 2.2.2.2
-  port: 1000
-  cipher: aes-128-gcm
-  password: 123456
-- name: HK-1
-  type: ss
-  server: 3.3.3.1
-  port: 1000
-  cipher: aes-128-gcm
-  password: 123456
-- name: HK-2
-  type: ss
-  server: 3.3.3.1
-  port: 1000
-  cipher: aes-128-gcm
-  password: 123456
+  cipher: aes-128-gcm, name: US-1, password: 123456, port: 1000, server: 1.1.1.1,
+    type: ss}
+
+  cipher: aes-128-gcm, name: US-2, password: 123456, port: 1000, server: 1.1.1.2,
+    type: ss}
+
+  cipher: aes-128-gcm, name: UK-1, password: 123456, port: 1000, server: 2.2.2.1,
+    type: ss}
+
+  cipher: aes-128-gcm, name: UK-2, password: 123456, port: 1000, server: 2.2.2.2,
+    type: ss}
+
+  cipher: aes-128-gcm, name: HK-1, password: 123456, port: 1000, server: 3.3.3.1,
+    type: ss}
+
+  cipher: aes-128-gcm, name: HK-2, password: 123456, port: 1000, server: 3.3.3.1,
+    type: ss}
+
+
 proxy-groups:
 - name: 🚀 节点选择
   type: select
@@ -72,11 +63,9 @@ proxy-groups:
   - UK-2
   - HK-1
   - HK-2
+
 - name: ♻️ 自动选择
   type: url-test
-  url: http://www.gstatic.com/generate_204
-  interval: 300
-  tolerance: 50
   proxies:
   - US-1
   - US-2
@@ -84,77 +73,94 @@ proxy-groups:
   - UK-2
   - HK-1
   - HK-2
+  url: http://www.gstatic.com/generate_204
+  interval: 300
+  tolerance: 50
+
 - name: 🟢 全球直连
   type: select
   proxies:
   - DIRECT
+
 - name: Google
   type: select
   proxies:
   - ♻️ 自动选择
   - 🚀 节点选择
   icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/Google.png
+
 - name: YouTube
   type: select
   proxies:
   - ♻️ 自动选择
   - 🚀 节点选择
   icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/YouTube.png
+
 - name: AI
   type: select
   proxies:
   - ♻️ 自动选择
   - 🚀 节点选择
   icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/AI.png
+
 - name: Netflix
   type: select
   proxies:
   - ♻️ 自动选择
   - 🚀 节点选择
   icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/Netflix_b.png
+
+
 rule-providers:
-  Google:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/HugoXu12/openclash-auto-build/main/rules/Google.list
-    path: ./ruleset/google.yaml
-    interval: 86400
-  YouTube:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/HugoXu12/openclash-auto-build/main/rules/YouTube.list
-    path: ./ruleset/youtube.yaml
-    interval: 86400
-  AI:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/HugoXu12/openclash-auto-build/main/rules/AI.list
-    path: ./ruleset/ai.yaml
-    interval: 86400
-  Netflix:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/HugoXu12/openclash-auto-build/main/rules/Netflix.list
-    path: ./ruleset/netflix.yaml
-    interval: 86400
-  Proxy:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/HugoXu12/openclash-auto-build/main/rules/Proxy.list
-    path: ./ruleset/proxy.yaml
-    interval: 86400
-  Direct:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/HugoXu12/openclash-auto-build/main/rules/Direct.list
-    path: ./ruleset/direct.yaml
-    interval: 86400
+Google:
+  type: http
+  behavior: classical
+  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/Google.list
+  path: ./ruleset/google.yaml
+  interval: 86400
+
+YouTube:
+  type: http
+  behavior: classical
+  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/YouTube.list
+  path: ./ruleset/youtube.yaml
+  interval: 86400
+
+AI:
+  type: http
+  behavior: classical
+  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/AI.list
+  path: ./ruleset/ai.yaml
+  interval: 86400
+
+Netflix:
+  type: http
+  behavior: classical
+  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/Netflix.list
+  path: ./ruleset/netflix.yaml
+  interval: 86400
+
+Proxy:
+  type: http
+  behavior: classical
+  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/Proxy.list
+  path: ./ruleset/proxy.yaml
+  interval: 86400
+
+Direct:
+  type: http
+  behavior: classical
+  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/Direct.list
+  path: ./ruleset/direct.yaml
+  interval: 86400
+
+
 rules:
-- RULE-SET,Google,Google
-- RULE-SET,YouTube,YouTube
-- RULE-SET,AI,AI
-- RULE-SET,Netflix,Netflix
-- RULE-SET,Direct,🟢 全球直连
-- RULE-SET,Proxy,🚀 节点选择
-- GEOIP,CN,🟢 全球直连,no-resolve
-- MATCH,🚀 节点选择
+  - RULE-SET,Google,Google
+  - RULE-SET,YouTube,YouTube
+  - RULE-SET,AI,AI
+  - RULE-SET,Netflix,Netflix
+  - RULE-SET,Direct,🟢 全球直连
+  - RULE-SET,Proxy,🚀 节点选择
+  - GEOIP,CN,🟢 全球直连,no-resolve
+  - MATCH,🚀 节点选择
