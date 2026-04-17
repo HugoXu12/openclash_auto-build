@@ -1,4 +1,6 @@
 #!/bin/bash
+
+# 确保脚本遇到错误时停止执行
 set -e
 
 echo "=== 1. 初始化文件夹 ==="
@@ -10,7 +12,7 @@ touch rules-src/Proxy_custom.list rules-src/Direct_custom.list
 clean_list() {
     local file=$1
     if [ -f "$file" ]; then
-        sed -i 's/#.*//g' "$file"          # 删注释
+        sed -i 's/#.*//g' "$file"          # 删#号后面的注释
         sed -i 's/[[:space:]]*$//' "$file" # 删末尾空格
         sed -i '/^[[:space:]]*$/d' "$file" # 删空行
         sort -u "$file" -o "$file"         # 排序并去重
@@ -22,7 +24,7 @@ clean_url() {
     echo "$1" | tr -d '"' | tr -d "'" | tr -d '\r'
 }
 
-echo "=== 2. 处理 [Custom_link] ==="
+echo "=== 2. 处理 [rules-src/rules.list里面的Custom_link] ==="
 awk '/^\[Custom_link\]/{flag=1; next} /^\[/{flag=0} flag && NF' rules-src/rules.list | while IFS='|' read -r name url; do
     name=$(echo "$name" | xargs)
     url=$(clean_url "$url")
@@ -34,7 +36,7 @@ awk '/^\[Custom_link\]/{flag=1; next} /^\[/{flag=0} flag && NF' rules-src/rules.
     fi
 done
 
-echo "=== 3. 处理 [Proxy-src_link] ==="
+echo "=== 3. 处理 [rules-src/rules.list里面的Proxy-src_link] ==="
 awk '/^\[Proxy-src_link\]/{flag=1; next} /^\[/{flag=0} flag && NF' rules-src/rules.list | while read -r url; do
     url=$(clean_url "$url")
     if [ -n "$url" ] && [[ ! "$url" =~ ^# ]]; then
@@ -43,7 +45,7 @@ awk '/^\[Proxy-src_link\]/{flag=1; next} /^\[/{flag=0} flag && NF' rules-src/rul
 done
 clean_list "tmp/Proxy_tmp.list"
 
-echo "=== 4. 处理 [Direct-src_link] ==="
+echo "=== 4. 处理 [rules-src/rules.list里面的Direct-src_link] ==="
 awk '/^\[Direct-src_link\]/{flag=1; next} /^\[/{flag=0} flag && NF' rules-src/rules.list | while read -r url; do
     url=$(clean_url "$url")
     if [ -n "$url" ] && [[ ! "$url" =~ ^# ]]; then
