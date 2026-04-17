@@ -29,12 +29,12 @@ def main():
     GITHUB_REPO_RAW = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/refs/heads/main/rules"
 
     ICON_MAP = {
-        "Google": "https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/Google.png",
-        "YouTube": "https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/YouTube.png",
-        "AI": "https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/AI.png",
-        "Netflix": "https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/Netflix_b.png",
-        "Proxy": "https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/Proxy.png",
-        "Direct": "https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/Direct.png"
+        "Google": "https://raw.githubusercontent.com/Vbaethon/HOMOMIX/main/Icon/Color/Google.png",
+        "YouTube": "https://raw.githubusercontent.com/Vbaethon/HOMOMIX/main/Icon/Color/YouTube.png",
+        "AI": "https://raw.githubusercontent.com/Vbaethon/HOMOMIX/main/Icon/Color/AI.png",
+        "Netflix": "https://raw.githubusercontent.com/Vbaethon/HOMOMIX/main/Icon/Color/Netflix_b.png",
+        "Proxy": "https://raw.githubusercontent.com/Vbaethon/HOMOMIX/main/Icon/Color/Proxy.png",
+        "Direct": "https://raw.githubusercontent.com/Vbaethon/HOMOMIX/main/Icon/Color/Direct.png"
     }
 
     # 1. 加载数据
