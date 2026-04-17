@@ -1,177 +1,132 @@
 import os
+import yaml
+
+# 保持 YAML 写入时不改变锚点和格式
+class NoAliasDumper(yaml.SafeDumper):
+    def ignore_aliases(self, data):
+        return True
+
+def read_custom_links(filepath):
+    custom_names = []
+    with open(filepath, 'r', encoding='utf-8') as f:
+        is_custom = False
+        for line in f:
+            line = line.strip()
+            if line.startswith('[Custom_link]'):
+                is_custom = True
+                continue
+            if line.startswith('['):
+                is_custom = False
+                continue
+            if is_custom and line and '|' in line:
+                name = line.split('|')[0].strip()
+                custom_names.append(name)
+    return custom_names
 
 def main():
-    # 获取你的 GitHub 仓库地址，用于拼接 rules 订阅链接
-    repo = os.environ.get("GITHUB_REPOSITORY", "YourName/YourRepo")
-    branch = "main"
-    base_raw_url = f"https://raw.githubusercontent.com/{repo}/refs/heads/{branch}/rules"
-
-    # 1. 动态读取 Custom_link
-    custom_links = []
-    if os.path.exists("rules-src/rules.list"):
-        with open("rules-src/rules.list", "r", encoding="utf-8") as f:
-            in_custom = False
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                if line == "[Custom_link]":
-                    in_custom = True
-                    continue
-                elif line.startswith("["):
-                    in_custom = False
-                
-                if in_custom and "|" in line:
-                    name = line.split("|")[0].strip()
-                    custom_links.append(name)
-
-    # 2. 拼接头部及自建节点配置 (严格使用你提供的代理信息)
-    yaml_content = """port: 7890
-socks-port: 7891
-redir-port: 7892
-mixed-port: 7893
-allow-lan: true
-mode: rule
-log-level: info
-ipv6: false
-
-################################
-# DNS（防污染核心）
-################################
-dns:
-  enable: true
-  cache-algorithm: arc
-  listen: 0.0.0.0:1053
-  ipv6: false
-  respect-rules: true
-  enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.1/16
-  fake-ip-filter-mode: blacklist
-  fake-ip-filter:
-    - "rule-set:fakeipfilter_domain"
-  default-nameserver:
-    - https://223.5.5.5/dns-query
-  proxy-server-nameserver:
-    - https://dns.alidns.com/dns-query
-    - https://doh.pub/dns-query
-  nameserver:
-    - https://dns.alidns.com/dns-query
-    - https://doh.pub/dns-query
-
-proxies:
-  - {name: US-1, type: ss, server: 1.1.1.1, port: 1000, cipher: aes-128-gcm, password: 123456}
-  - {name: US-2, type: ss, server: 1.1.1.2, port: 1000, cipher: aes-128-gcm, password: 123456}
-  - {name: UK-1, type: ss, server: 2.2.2.1, port: 1000, cipher: aes-128-gcm, password: 123456}
-  - {name: UK-2, type: ss, server: 2.2.2.2, port: 1000, cipher: aes-128-gcm, password: 123456}
-  - {name: HK-1, type: ss, server: 3.3.3.1, port: 1000, cipher: aes-128-gcm, password: 123456}
-  - {name: HK-2, type: ss, server: 3.3.3.2, port: 1000, cipher: aes-128-gcm, password: 123456}
-
-proxy-groups:
-  - name: 🚀 节点选择
-    type: select
-    proxies:
-      - US-1 
-      - US-2 
-      - UK-1 
-      - UK-2 
-      - HK-1 
-      - HK-2
-
-  - name: ♻️ 自动选择
-    type: url-test
-    url: http://www.gstatic.com/generate_204
-    interval: 300
-    tolerance: 50
-    proxies:
-      - US-1 
-      - US-2 
-      - UK-1 
-      - UK-2 
-      - HK-1 
-      - HK-2
-
-  - name: 🟢 全球直连
-    type: select
-    proxies:
-      - DIRECT
-"""
-
-    # 3. 动态插入 Custom 对应的代理组
-    for name in custom_links:
-        yaml_content += f"""
-  - name: {name}
-    type: select
-    proxies:
-      - ♻️ 自动选择
-      - 🚀 节点选择
-"""
-
-    yaml_content += "\nrule-providers:\n"
-
-    # 4. 动态插入 Custom 对应的 rule-providers
-    for name in custom_links:
-        yaml_content += f"""
-  {name}:
-    type: http
-    behavior: classical
-    url: {base_raw_url}/{name}.list
-    path: ./ruleset/{name}.yaml
-    interval: 86400
-"""
+    # 1. 提取动态规则集名称
+    custom_names = read_custom_links('rules-src/rules.list')
+    
+    # 2. 读取基础配置与节点配置
+    with open('config/base.yaml', 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f) or {}
         
-    # 5. 插入固定的 rule-providers
-    yaml_content += f"""
-  Direct_custom:
-    type: http
-    behavior: classical
-    url: {base_raw_url}/Direct_custom.list
-    path: ./ruleset/Direct_custom.yaml
-    interval: 86400
+    with open('config/node.yaml', 'r', encoding='utf-8') as f:
+        node_data = yaml.safe_load(f) or {}
+        proxies = node_data.get('proxies', [])
+        proxy_names = [p['name'] for p in proxies]
 
-  Proxy_custom:
-    type: http
-    behavior: classical
-    url: {base_raw_url}/Proxy_custom.list
-    path: ./ruleset/Proxy_custom.yaml
-    interval: 86400
+    config['proxies'] = proxies
 
-  Proxy:
-    type: http
-    behavior: classical
-    url: {base_raw_url}/Proxy.list
-    path: ./ruleset/Proxy.yaml
-    interval: 86400
+    # 3. 构建 proxy-groups
+    proxy_groups = [
+        {
+            'name': '🚀 节点选择',
+            'type': 'select',
+            'proxies': proxy_names
+        },
+        {
+            'name': '♻️ 自动选择',
+            'type': 'url-test',
+            'url': 'http://www.gstatic.com/generate_204',
+            'interval': 300,
+            'tolerance': 50,
+            'proxies': proxy_names
+        },
+        {
+            'name': '🟢 全球直连',
+            'type': 'select',
+            'proxies': ['DIRECT']
+        }
+    ]
 
-  Direct:
-    type: http
-    behavior: classical
-    url: {base_raw_url}/Direct.list
-    path: ./ruleset/Direct.yaml
-    interval: 86400
+    # 动态插入 Custom 分组 (比如 Google, Youtube, AI)
+    for name in custom_names:
+        group = {
+            'name': name,
+            'type': 'select',
+            'proxies': ['♻️ 自动选择', '🚀 节点选择']
+        }
+        # 如果需要图标，可以在此处做名称判断并分配 URL
+        proxy_groups.append(group)
 
-rules:
-"""
+    config['proxy-groups'] = proxy_groups
 
-    # 6. 按照严格优先级组装 rules 分流
-    # 优先级 1: Custom_link (Google > Youtube > AI 等，按 rules.list 中填写的顺序)
-    for name in custom_links:
-        yaml_content += f"  - RULE-SET,{name},{name}\n"
+    # 4. 构建 rule-providers
+    # 请修改为你的真实 GITHUB 用户名和仓库名！
+    GITHUB_REPO_RAW = "https://raw.githubusercontent.com/YOUR_GITHUB_NAME/YOUR_REPO_NAME/main/rules"
+    
+    rule_providers = {}
+    
+    # 动态添加 Custom providers
+    for name in custom_names:
+        rule_providers[name] = {
+            'type': 'http',
+            'behavior': 'classical',
+            'url': f"{GITHUB_REPO_RAW}/{name}.list",
+            'path': f"./ruleset/{name.lower()}.yaml",
+            'interval': 86400
+        }
+
+    # 添加基础 providers
+    rule_providers['Proxy'] = {
+        'type': 'http',
+        'behavior': 'classical',
+        'url': f"{GITHUB_REPO_RAW}/Proxy.list",
+        'path': "./ruleset/proxy.yaml",
+        'interval': 86400
+    }
+    rule_providers['Direct'] = {
+        'type': 'http',
+        'behavior': 'classical',
+        'url': f"{GITHUB_REPO_RAW}/Direct.list",
+        'path': "./ruleset/direct.yaml",
+        'interval': 86400
+    }
+    
+    config['rule-providers'] = rule_providers
+
+    # 5. 构建 rules
+    rules = []
+    # 优先级: Custom > Direct > Proxy > GEOIP/MATCH
+    for name in custom_names:
+        rules.append(f"RULE-SET,{name},{name}")
         
-    # 优先级 2-5: Direct_custom > Proxy_custom > Direct > Proxy
-    yaml_content += """  - RULE-SET,Direct_custom,🟢 全球直连
-  - RULE-SET,Proxy_custom,🚀 节点选择
-  - RULE-SET,Direct,🟢 全球直连
-  - RULE-SET,Proxy,🚀 节点选择
-  - GEOIP,CN,🟢 全球直连,no-resolve
-  - MATCH,🚀 节点选择
-"""
+    rules.extend([
+        "RULE-SET,Direct,🟢 全球直连",
+        "RULE-SET,Proxy,🚀 节点选择",
+        "GEOIP,CN,🟢 全球直连,no-resolve",
+        "MATCH,🚀 节点选择"
+    ])
+    
+    config['rules'] = rules
 
-    # 输出到 build/config.yaml
-    os.makedirs("build", exist_ok=True)
-    with open("build/config.yaml", "w", encoding="utf-8") as f:
-        f.write(yaml_content)
+    # 6. 输出 YAML
+    os.makedirs('build', exist_ok=True)
+    with open('build/config.yaml', 'w', encoding='utf-8') as f:
+        yaml.dump(config, f, default_flow_style=False, sort_keys=False, allow_unicode=True, Dumper=NoAliasDumper)
+        
+    print("=== YAML 配置构建完成 -> build/config.yaml ===")
 
-    print(f"成功生成 config.yaml，包含 {len(custom_links)} 个自定义动态分流规则。")
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
