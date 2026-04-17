@@ -1,13 +1,7 @@
 import os
 import yaml
 
-# 保持 YAML 写入时不产生锚点（&id001），使配置易读
-class NoAliasDumper(yaml.SafeDumper):
-    def ignore_aliases(self, data):
-        return True
-
 def read_custom_links(filepath):
-    """从 rules.list 中提取 [Custom_link] 节的规则名称"""
     custom_names = []
     if not os.path.exists(filepath):
         return custom_names
@@ -28,13 +22,11 @@ def read_custom_links(filepath):
     return custom_names
 
 def main():
-    # --- 1. 配置区域 ---
-    # 【重要】请修改为你真实的 GitHub 仓库 Raw 地址
+    # --- 配置信息 ---
     GITHUB_USER = "HugoXu12"
-    GITHUB_REPO = "openclash-auto-build" # 替换为你的仓库名
+    GITHUB_REPO = "openclash-auto" 
     GITHUB_REPO_RAW = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/main/rules"
 
-    # 图标映射表
     ICON_MAP = {
         "Google": "https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/Google.png",
         "YouTube": "https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/YouTube.png",
@@ -44,111 +36,87 @@ def main():
         "Direct": "https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/Direct.png"
     }
 
-    # --- 2. 加载基础数据 ---
+    # 1. 加载数据
     custom_names = read_custom_links('rules-src/rules.list')
     
-    with open('config/base.yaml', 'r', encoding='utf-8') as f:
-        config = yaml.safe_load(f) or {}
-        
     with open('config/node.yaml', 'r', encoding='utf-8') as f:
         node_data = yaml.safe_load(f) or {}
         proxies = node_data.get('proxies', [])
         proxy_names = [p['name'] for p in proxies]
 
-    # 注入节点信息
-    config['proxies'] = proxies
+    # 2. 开始构建内容字符串
+    output = []
 
-    # --- 3. 构建策略组 (proxy-groups) ---
-    proxy_groups = [
-        {
-            'name': '🚀 节点选择',
-            'type': 'select',
-            'proxies': proxy_names
-        },
-        {
-            'name': '♻️ 自动选择',
-            'type': 'url-test',
-            'url': 'http://www.gstatic.com/generate_204',
-            'interval': 300,
-            'tolerance': 50,
-            'proxies': proxy_names
-        },
-        {
-            'name': '🟢 全球直连',
-            'type': 'select',
-            'proxies': ['DIRECT']
-        }
+    # 直接读取 base.yaml 的原始文本，保留所有空行和注释
+    with open('config/base.yaml', 'r', encoding='utf-8') as f:
+        output.append(f.read())
+    
+    output.append("\n\nproxies:")
+    for p in proxies:
+        # 节点后空一行，使用 yaml.dump 转换单个节点以保持格式正确
+        p_str = yaml.dump([p], default_flow_style=True, allow_unicode=True).strip()
+        output.append(f"  {p_str[2:-1]}") # 去掉 dump 出来的列表括号 [- ]
+        output.append("") # 节点间空一行
+
+    output.append("\nproxy-groups:")
+    
+    # 基础组
+    groups_template = [
+        {"name": "🚀 节点选择", "type": "select", "proxies": proxy_names},
+        {"name": "♻️ 自动选择", "type": "url-test", "proxies": proxy_names, "url": "http://www.gstatic.com/generate_204", "interval": 300, "tolerance": 50},
+        {"name": "🟢 全球直连", "type": "select", "proxies": ["DIRECT"]}
     ]
+    
+    for g in groups_template:
+        output.append(yaml.dump([g], default_flow_style=False, sort_keys=False, allow_unicode=True).strip())
+        output.append("") # 组之间空一行
 
-    # 动态添加 Custom 规则的分组（带图标匹配）
+    # 动态 Custom 组
     for name in custom_names:
-        group = {
-            'name': name,
-            'type': 'select',
-            'proxies': ['♻️ 自动选择', '🚀 节点选择']
+        g = {
+            "name": name,
+            "type": "select",
+            "proxies": ["♻️ 自动选择", "🚀 节点选择"]
         }
-        # 匹配图标
         match_name = next((k for k in ICON_MAP if k.lower() == name.lower()), None)
         if match_name:
-            group['icon'] = ICON_MAP[match_name]
+            g["icon"] = ICON_MAP[match_name]
         
-        proxy_groups.append(group)
+        output.append(yaml.dump([g], default_flow_style=False, sort_keys=False, allow_unicode=True).strip())
+        output.append("")
 
-    config['proxy-groups'] = proxy_groups
-
-    # --- 4. 构建 Rule Providers ---
-    rule_providers = {}
-    
-    # Custom 规则的 Provider
+    # Rule Providers
+    output.append("\nrule-providers:")
+    providers = {}
     for name in custom_names:
-        rule_providers[name] = {
-            'type': 'http',
-            'behavior': 'classical',
-            'url': f"{GITHUB_REPO_RAW}/{name}.list",
-            'path': f"./ruleset/{name.lower()}.yaml",
-            'interval': 86400
+        providers[name] = {
+            "type": "http", "behavior": "classical", 
+            "url": f"{GITHUB_REPO_RAW}/{name}.list", 
+            "path": f"./ruleset/{name.lower()}.yaml", "interval": 86400
         }
+    providers["Proxy"] = {"type": "http", "behavior": "classical", "url": f"{GITHUB_REPO_RAW}/Proxy.list", "path": "./ruleset/proxy.yaml", "interval": 86400}
+    providers["Direct"] = {"type": "http", "behavior": "classical", "url": f"{GITHUB_REPO_RAW}/Direct.list", "path": "./ruleset/direct.yaml", "interval": 86400}
 
-    # 基础 Proxy 和 Direct 的 Provider
-    rule_providers['Proxy'] = {
-        'type': 'http',
-        'behavior': 'classical',
-        'url': f"{GITHUB_REPO_RAW}/Proxy.list",
-        'path': "./ruleset/proxy.yaml",
-        'interval': 86400
-    }
-    rule_providers['Direct'] = {
-        'type': 'http',
-        'behavior': 'classical',
-        'url': f"{GITHUB_REPO_RAW}/Direct.list",
-        'path': "./ruleset/direct.yaml",
-        'interval': 86400
-    }
-    
-    config['rule-providers'] = rule_providers
+    for k, v in providers.items():
+        output.append(yaml.dump({k: v}, default_flow_style=False, sort_keys=False, allow_unicode=True).strip())
+        output.append("") # Provider 之间空一行
 
-    # --- 5. 构建 最终规则 (rules) ---
-    # 优先级逻辑：Custom > Direct > Proxy > GEOIP/MATCH
-    rules_list = []
+    # Rules
+    output.append("\nrules:")
     for name in custom_names:
-        rules_list.append(f"RULE-SET,{name},{name}")
-        
-    rules_list.extend([
-        "RULE-SET,Direct,🟢 全球直连",
-        "RULE-SET,Proxy,🚀 节点选择",
-        "GEOIP,CN,🟢 全球直连,no-resolve",
-        "MATCH,🚀 节点选择"
-    ])
+        output.append(f"  - RULE-SET,{name},{name}")
     
-    config['rules'] = rules_list
+    output.append("  - RULE-SET,Direct,🟢 全球直连")
+    output.append("  - RULE-SET,Proxy,🚀 节点选择")
+    output.append("  - GEOIP,CN,🟢 全球直连,no-resolve")
+    output.append("  - MATCH,🚀 节点选择")
 
-    # --- 6. 写入文件 ---
+    # 3. 写入文件
     os.makedirs('build', exist_ok=True)
     with open('build/config.yaml', 'w', encoding='utf-8') as f:
-        # 使用 NoAliasDumper 保证 YAML 格式纯净
-        yaml.dump(config, f, default_flow_style=False, sort_keys=False, allow_unicode=True, Dumper=NoAliasDumper)
-        
-    print(f"成功构建配置：build/config.yaml (包含 {len(custom_names)} 个自定义规则集)")
+        f.write("\n".join(output))
+
+    print("=== 排版优化后的 YAML 已生成 ===")
 
 if __name__ == '__main__':
     main()
