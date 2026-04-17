@@ -1,63 +1,177 @@
 import os
 
-RULE_FILE = "rules-src/rules.list"
-OUTPUT = "build/config.yaml"
-
-def parse_custom():
-    custom = []
-    with open(RULE_FILE, "r") as f:
-        lines = f.readlines()
-
-    in_section = False
-    for line in lines:
-        line = line.strip()
-
-        if line == "[Custom_link]":
-            in_section = True
-            continue
-        if line.startswith("[") and in_section:
-            break
-
-        if in_section and line and "|" in line:
-            name = line.split("|")[0]
-            custom.append(name)
-
-    return custom
-
-
 def main():
-    custom = parse_custom()
+    # 获取你的 GitHub 仓库地址，用于拼接 rules 订阅链接
+    repo = os.environ.get("GITHUB_REPOSITORY", "YourName/YourRepo")
+    branch = "main"
+    base_raw_url = f"https://raw.githubusercontent.com/{repo}/refs/heads/{branch}/rules"
 
-    os.makedirs("build", exist_ok=True)
+    # 1. 动态读取 Custom_link
+    custom_links = []
+    if os.path.exists("rules-src/rules.list"):
+        with open("rules-src/rules.list", "r", encoding="utf-8") as f:
+            in_custom = False
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if line == "[Custom_link]":
+                    in_custom = True
+                    continue
+                elif line.startswith("["):
+                    in_custom = False
+                
+                if in_custom and "|" in line:
+                    name = line.split("|")[0].strip()
+                    custom_links.append(name)
 
-    with open(OUTPUT, "w") as f:
+    # 2. 拼接头部及自建节点配置 (严格使用你提供的代理信息)
+    yaml_content = """port: 7890
+socks-port: 7891
+redir-port: 7892
+mixed-port: 7893
+allow-lan: true
+mode: rule
+log-level: info
+ipv6: false
 
-        # proxies
-        f.write("proxies:\n")
-        f.write("""  - {name: US-1, type: ss, server: 1.1.1.1, port: 1000, cipher: aes-128-gcm, password: 123456}
+################################
+# DNS（防污染核心）
+################################
+dns:
+  enable: true
+  cache-algorithm: arc
+  listen: 0.0.0.0:1053
+  ipv6: false
+  respect-rules: true
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter-mode: blacklist
+  fake-ip-filter:
+    - "rule-set:fakeipfilter_domain"
+  default-nameserver:
+    - https://223.5.5.5/dns-query
+  proxy-server-nameserver:
+    - https://dns.alidns.com/dns-query
+    - https://doh.pub/dns-query
+  nameserver:
+    - https://dns.alidns.com/dns-query
+    - https://doh.pub/dns-query
+
+proxies:
+  - {name: US-1, type: ss, server: 1.1.1.1, port: 1000, cipher: aes-128-gcm, password: 123456}
   - {name: US-2, type: ss, server: 1.1.1.2, port: 1000, cipher: aes-128-gcm, password: 123456}
   - {name: UK-1, type: ss, server: 2.2.2.1, port: 1000, cipher: aes-128-gcm, password: 123456}
   - {name: UK-2, type: ss, server: 2.2.2.2, port: 1000, cipher: aes-128-gcm, password: 123456}
   - {name: HK-1, type: ss, server: 3.3.3.1, port: 1000, cipher: aes-128-gcm, password: 123456}
   - {name: HK-2, type: ss, server: 3.3.3.2, port: 1000, cipher: aes-128-gcm, password: 123456}
 
-""")
+proxy-groups:
+  - name: 🚀 节点选择
+    type: select
+    proxies:
+      - US-1 
+      - US-2 
+      - UK-1 
+      - UK-2 
+      - HK-1 
+      - HK-2
 
-        f.write("port: 7890\n\n")
+  - name: ♻️ 自动选择
+    type: url-test
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+    proxies:
+      - US-1 
+      - US-2 
+      - UK-1 
+      - UK-2 
+      - HK-1 
+      - HK-2
 
-        # rules
-        f.write("rules:\n")
+  - name: 🟢 全球直连
+    type: select
+    proxies:
+      - DIRECT
+"""
 
-        # Custom 优先级最高
-        for name in custom:
-            f.write(f"  - RULE-SET,{name},{name}\n")
+    # 3. 动态插入 Custom 对应的代理组
+    for name in custom_links:
+        yaml_content += f"""
+  - name: {name}
+    type: select
+    proxies:
+      - ♻️ 自动选择
+      - 🚀 节点选择
+"""
 
-        f.write("  - RULE-SET,Direct_custom,DIRECT\n")
-        f.write("  - RULE-SET,Proxy_custom,Proxy\n")
-        f.write("  - RULE-SET,Direct,DIRECT\n")
-        f.write("  - RULE-SET,Proxy,Proxy\n")
-        f.write("  - MATCH,Proxy\n")
+    yaml_content += "\nrule-providers:\n"
 
+    # 4. 动态插入 Custom 对应的 rule-providers
+    for name in custom_links:
+        yaml_content += f"""
+  {name}:
+    type: http
+    behavior: classical
+    url: {base_raw_url}/{name}.list
+    path: ./ruleset/{name}.yaml
+    interval: 86400
+"""
+        
+    # 5. 插入固定的 rule-providers
+    yaml_content += f"""
+  Direct_custom:
+    type: http
+    behavior: classical
+    url: {base_raw_url}/Direct_custom.list
+    path: ./ruleset/Direct_custom.yaml
+    interval: 86400
+
+  Proxy_custom:
+    type: http
+    behavior: classical
+    url: {base_raw_url}/Proxy_custom.list
+    path: ./ruleset/Proxy_custom.yaml
+    interval: 86400
+
+  Proxy:
+    type: http
+    behavior: classical
+    url: {base_raw_url}/Proxy.list
+    path: ./ruleset/Proxy.yaml
+    interval: 86400
+
+  Direct:
+    type: http
+    behavior: classical
+    url: {base_raw_url}/Direct.list
+    path: ./ruleset/Direct.yaml
+    interval: 86400
+
+rules:
+"""
+
+    # 6. 按照严格优先级组装 rules 分流
+    # 优先级 1: Custom_link (Google > Youtube > AI 等，按 rules.list 中填写的顺序)
+    for name in custom_links:
+        yaml_content += f"  - RULE-SET,{name},{name}\n"
+        
+    # 优先级 2-5: Direct_custom > Proxy_custom > Direct > Proxy
+    yaml_content += """  - RULE-SET,Direct_custom,🟢 全球直连
+  - RULE-SET,Proxy_custom,🚀 节点选择
+  - RULE-SET,Direct,🟢 全球直连
+  - RULE-SET,Proxy,🚀 节点选择
+  - GEOIP,CN,🟢 全球直连,no-resolve
+  - MATCH,🚀 节点选择
+"""
+
+    # 输出到 build/config.yaml
+    os.makedirs("build", exist_ok=True)
+    with open("build/config.yaml", "w", encoding="utf-8") as f:
+        f.write(yaml_content)
+
+    print(f"成功生成 config.yaml，包含 {len(custom_links)} 个自定义动态分流规则。")
 
 if __name__ == "__main__":
     main()
