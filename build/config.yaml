@@ -138,56 +138,56 @@ rule-providers:
   Google:
   type: http
   behavior: classical
-  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/Google.list
+  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto-build/main/rules/Google.list
   path: ./ruleset/google.yaml
   interval: 86400
 
   YouTube:
   type: http
   behavior: classical
-  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/YouTube.list
+  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto-build/main/rules/YouTube.list
   path: ./ruleset/youtube.yaml
   interval: 86400
 
   AI:
   type: http
   behavior: classical
-  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/AI.list
+  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto-build/main/rules/AI.list
   path: ./ruleset/ai.yaml
   interval: 86400
 
   Netflix:
   type: http
   behavior: classical
-  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/Netflix.list
+  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto-build/main/rules/Netflix.list
   path: ./ruleset/netflix.yaml
   interval: 86400
 
   Direct_custom:
   type: http
   behavior: classical
-  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/Direct_custom.list
+  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto-build/main/rules/Direct_custom.list
   path: ./ruleset/direct_custom.yaml
   interval: 86400
 
   Proxy_custom:
   type: http
   behavior: classical
-  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/Proxy_custom.list
+  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto-build/main/rules/Proxy_custom.list
   path: ./ruleset/proxy_custom.yaml
   interval: 86400
 
   Direct:
   type: http
   behavior: classical
-  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/Direct.list
+  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto-build/main/rules/Direct.list
   path: ./ruleset/direct.yaml
   interval: 86400
 
   Proxy:
   type: http
   behavior: classical
-  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/Proxy.list
+  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto-build/main/rules/Proxy.list
   path: ./ruleset/proxy.yaml
   interval: 86400
 
