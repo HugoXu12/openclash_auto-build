@@ -25,7 +25,7 @@ def read_custom_links(filepath):
 def main():
     # --- 配置信息 ---
     GITHUB_USER = "HugoXu12"
-    GITHUB_REPO = "openclash-auto" 
+    GITHUB_REPO = "openclash-auto-build" 
     GITHUB_REPO_RAW = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/main/rules"
 
     ICON_MAP = {
