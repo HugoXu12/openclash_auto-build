@@ -1,36 +1,16 @@
-#  常用
-DOMAIN-SUFFIX,myhd.pro
-DOMAIN-SUFFIX,quickconnect.to
-DOMAIN-SUFFIX,quickconnect.cn
-
-
-#时间更新直连
-# ① 标准 NTP（所有系统基础）
-DST-PORT,123/UDP
-
-# ② 常见时间服务器（必须直连）
-DOMAIN-SUFFIX,time.windows.com
-DOMAIN-SUFFIX,time.nist.gov
-DOMAIN-SUFFIX,time.google.com
-DOMAIN-SUFFIX,time.apple.com
-
-# ③ Android / Google / Fire TV（核心）
-DOMAIN-SUFFIX,time.android.com
+DOMAIN-KEYWORD,time
 DOMAIN-SUFFIX,android.clients.google.com
 DOMAIN-SUFFIX,clients3.google.com
-
-# ④ Apple TV / iOS 生态
-DOMAIN-SUFFIX,time-ios.apple.com
-DOMAIN-SUFFIX,time.apple.com
-
-# ⑤ 广义时间关键词（兜底，防HTTPS时间）
-DOMAIN-KEYWORD,time
-
-# ⑥ 防止系统网络检测误判（很关键）
-DOMAIN-SUFFIX,connectivitycheck.gstatic.com
 DOMAIN-SUFFIX,connectivitycheck.android.com
-
-# ⑦ NTP服务器池（部分电视会用）
+DOMAIN-SUFFIX,connectivitycheck.gstatic.com
+DOMAIN-SUFFIX,myhd.pro
 DOMAIN-SUFFIX,pool.ntp.org
-
-# ================= END =================
+DOMAIN-SUFFIX,quickconnect.cn
+DOMAIN-SUFFIX,quickconnect.to
+DOMAIN-SUFFIX,time-ios.apple.com
+DOMAIN-SUFFIX,time.android.com
+DOMAIN-SUFFIX,time.apple.com
+DOMAIN-SUFFIX,time.google.com
+DOMAIN-SUFFIX,time.nist.gov
+DOMAIN-SUFFIX,time.windows.com
+DST-PORT,123/UDP
