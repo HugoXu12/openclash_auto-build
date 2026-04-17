@@ -110,28 +110,28 @@ proxy-groups:
     proxies:
     - ♻️ 自动选择
     - 🚀 节点选择
-    icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/Google.png
+    icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/main/Icon/Color/Google.png
 
   - name: YouTube
     type: select
     proxies:
     - ♻️ 自动选择
     - 🚀 节点选择
-    icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/YouTube.png
+    icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/main/Icon/Color/YouTube.png
 
   - name: AI
     type: select
     proxies:
     - ♻️ 自动选择
     - 🚀 节点选择
-    icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/AI.png
+    icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/main/Icon/Color/AI.png
 
   - name: Netflix
     type: select
     proxies:
     - ♻️ 自动选择
     - 🚀 节点选择
-    icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/Netflix_b.png
+    icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/main/Icon/Color/Netflix_b.png
 
 
 rule-providers:
