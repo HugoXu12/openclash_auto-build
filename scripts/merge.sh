@@ -60,4 +60,7 @@ awk 'NR==FNR{exclude[$0]; next} {
     else print $0 > "rules/Direct.list"
 }' tmp/Direct_exclude.list tmp/Direct_tmp.list
 
+cp rules-src/Proxy_custom.list rules/Proxy_custom.list
+cp rules-src/Direct_custom.list rules/Direct_custom.list
+
 echo "=== 规则合并处理完成 ==="
