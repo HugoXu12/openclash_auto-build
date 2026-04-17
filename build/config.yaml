@@ -163,11 +163,18 @@ rule-providers:
   path: ./ruleset/netflix.yaml
   interval: 86400
 
-  Proxy:
+  Direct_custom:
   type: http
   behavior: classical
-  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/Proxy.list
-  path: ./ruleset/proxy.yaml
+  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/Direct_custom.list
+  path: ./ruleset/direct_custom.yaml
+  interval: 86400
+
+  Proxy_custom:
+  type: http
+  behavior: classical
+  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/Proxy_custom.list
+  path: ./ruleset/proxy_custom.yaml
   interval: 86400
 
   Direct:
@@ -177,12 +184,21 @@ rule-providers:
   path: ./ruleset/direct.yaml
   interval: 86400
 
+  Proxy:
+  type: http
+  behavior: classical
+  url: https://raw.githubusercontent.com/HugoXu12/openclash-auto/main/rules/Proxy.list
+  path: ./ruleset/proxy.yaml
+  interval: 86400
+
 
 rules:
   - RULE-SET,Google,Google
   - RULE-SET,YouTube,YouTube
   - RULE-SET,AI,AI
   - RULE-SET,Netflix,Netflix
+  - RULE-SET,Direct_custom,🟢 全球直连
+  - RULE-SET,Proxy_custom,🚀 节点选择
   - RULE-SET,Direct,🟢 全球直连
   - RULE-SET,Proxy,🚀 节点选择
   - GEOIP,CN,🟢 全球直连,no-resolve
