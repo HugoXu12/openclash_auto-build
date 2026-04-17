@@ -85,12 +85,6 @@ proxy-groups:
       - ♻️ 自动选择
       - 🚀 节点选择
 
-  - name: Netflix
-    type: select
-    proxies:
-      - ♻️ 自动选择
-      - 🚀 节点选择
-
 rule-providers:
 
   Google:
@@ -112,13 +106,6 @@ rule-providers:
     behavior: classical
     url: https://raw.githubusercontent.com/HugoXu12/openclash_auto-build/refs/heads/main/rules/AI.list
     path: ./ruleset/AI.yaml
-    interval: 86400
-
-  Netflix:
-    type: http
-    behavior: classical
-    url: https://raw.githubusercontent.com/HugoXu12/openclash_auto-build/refs/heads/main/rules/Netflix.list
-    path: ./ruleset/Netflix.yaml
     interval: 86400
 
   Direct_custom:
@@ -153,7 +140,6 @@ rules:
   - RULE-SET,Google,Google
   - RULE-SET,YouTube,YouTube
   - RULE-SET,AI,AI
-  - RULE-SET,Netflix,Netflix
   - RULE-SET,Direct_custom,🟢 全球直连
   - RULE-SET,Proxy_custom,🚀 节点选择
   - RULE-SET,Direct,🟢 全球直连
