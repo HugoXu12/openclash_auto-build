@@ -32,25 +32,58 @@ dns:
     - https://doh.pub/dns-query
 
 
-
 proxies:
-  cipher: aes-128-gcm, name: US-1, password: 123456, port: 1000, server: 1.1.1.1,
-    type: ss}
+  - name: US-1
+  type: ss
+  server: 1.1.1.1
+  port: 1000
+  cipher: aes-128-gcm
+  password: 123456
 
-  cipher: aes-128-gcm, name: US-2, password: 123456, port: 1000, server: 1.1.1.2,
-    type: ss}
 
-  cipher: aes-128-gcm, name: UK-1, password: 123456, port: 1000, server: 2.2.2.1,
-    type: ss}
+proxy-groups:
+  - name: US-2
+  type: ss
+  server: 1.1.1.2
+  port: 1000
+  cipher: aes-128-gcm
+  password: 123456
 
-  cipher: aes-128-gcm, name: UK-2, password: 123456, port: 1000, server: 2.2.2.2,
-    type: ss}
 
-  cipher: aes-128-gcm, name: HK-1, password: 123456, port: 1000, server: 3.3.3.1,
-    type: ss}
+proxy-groups:
+  - name: UK-1
+  type: ss
+  server: 2.2.2.1
+  port: 1000
+  cipher: aes-128-gcm
+  password: 123456
 
-  cipher: aes-128-gcm, name: HK-2, password: 123456, port: 1000, server: 3.3.3.1,
-    type: ss}
+
+proxy-groups:
+  - name: UK-2
+  type: ss
+  server: 2.2.2.2
+  port: 1000
+  cipher: aes-128-gcm
+  password: 123456
+
+
+proxy-groups:
+  - name: HK-1
+  type: ss
+  server: 3.3.3.1
+  port: 1000
+  cipher: aes-128-gcm
+  password: 123456
+
+
+proxy-groups:
+  - name: HK-2
+  type: ss
+  server: 3.3.3.1
+  port: 1000
+  cipher: aes-128-gcm
+  password: 123456
 
 
 proxy-groups:
