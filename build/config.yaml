@@ -56,6 +56,12 @@ proxies:
   port: 1000
   cipher: aes-128-gcm
   password: 123456
+- name: HK-2
+  type: ss
+  server: 3.3.3.1
+  port: 1000
+  cipher: aes-128-gcm
+  password: 123456
 proxy-groups:
 - name: 🚀 节点选择
   type: select
@@ -65,6 +71,7 @@ proxy-groups:
   - UK-1
   - UK-2
   - HK-1
+  - HK-2
 - name: ♻️ 自动选择
   type: url-test
   url: http://www.gstatic.com/generate_204
@@ -76,6 +83,7 @@ proxy-groups:
   - UK-1
   - UK-2
   - HK-1
+  - HK-2
 - name: 🟢 全球直连
   type: select
   proxies:
@@ -85,56 +93,60 @@ proxy-groups:
   proxies:
   - ♻️ 自动选择
   - 🚀 节点选择
+  icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/Google.png
 - name: YouTube
   type: select
   proxies:
   - ♻️ 自动选择
   - 🚀 节点选择
+  icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/YouTube.png
 - name: AI
   type: select
   proxies:
   - ♻️ 自动选择
   - 🚀 节点选择
+  icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/AI.png
 - name: Netflix
   type: select
   proxies:
   - ♻️ 自动选择
   - 🚀 节点选择
+  icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/Netflix_b.png
 rule-providers:
   Google:
     type: http
     behavior: classical
-    url: https://raw.githubusercontent.com/YOUR_GITHUB_NAME/YOUR_REPO_NAME/main/rules/Google.list
+    url: https://raw.githubusercontent.com/HugoXu12/openclash-auto-build/main/rules/Google.list
     path: ./ruleset/google.yaml
     interval: 86400
   YouTube:
     type: http
     behavior: classical
-    url: https://raw.githubusercontent.com/YOUR_GITHUB_NAME/YOUR_REPO_NAME/main/rules/YouTube.list
+    url: https://raw.githubusercontent.com/HugoXu12/openclash-auto-build/main/rules/YouTube.list
     path: ./ruleset/youtube.yaml
     interval: 86400
   AI:
     type: http
     behavior: classical
-    url: https://raw.githubusercontent.com/YOUR_GITHUB_NAME/YOUR_REPO_NAME/main/rules/AI.list
+    url: https://raw.githubusercontent.com/HugoXu12/openclash-auto-build/main/rules/AI.list
     path: ./ruleset/ai.yaml
     interval: 86400
   Netflix:
     type: http
     behavior: classical
-    url: https://raw.githubusercontent.com/YOUR_GITHUB_NAME/YOUR_REPO_NAME/main/rules/Netflix.list
+    url: https://raw.githubusercontent.com/HugoXu12/openclash-auto-build/main/rules/Netflix.list
     path: ./ruleset/netflix.yaml
     interval: 86400
   Proxy:
     type: http
     behavior: classical
-    url: https://raw.githubusercontent.com/YOUR_GITHUB_NAME/YOUR_REPO_NAME/main/rules/Proxy.list
+    url: https://raw.githubusercontent.com/HugoXu12/openclash-auto-build/main/rules/Proxy.list
     path: ./ruleset/proxy.yaml
     interval: 86400
   Direct:
     type: http
     behavior: classical
-    url: https://raw.githubusercontent.com/YOUR_GITHUB_NAME/YOUR_REPO_NAME/main/rules/Direct.list
+    url: https://raw.githubusercontent.com/HugoXu12/openclash-auto-build/main/rules/Direct.list
     path: ./ruleset/direct.yaml
     interval: 86400
 rules:
