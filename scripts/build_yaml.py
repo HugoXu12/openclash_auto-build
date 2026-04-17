@@ -51,14 +51,15 @@ def main():
     with open('config/base.yaml', 'r', encoding='utf-8') as f:
         output.append(f.read())
     
-    output.append("\n\nproxies:")
+    output.append("\nproxies:")
     for p in proxies:
-        # 节点后空一行，使用 yaml.dump 转换单个节点以保持格式正确
-        p_str = yaml.dump([p], default_flow_style=True, allow_unicode=True).strip()
-        output.append(f"  {p_str[2:-1]}") # 去掉 dump 出来的列表括号 [- ]
-        output.append("") # 节点间空一行
-
-    output.append("\nproxy-groups:")
+        # 使用 Block Style 生成节点，这样就不会有 {} 括号了
+        p_str = yaml.dump(p, default_flow_style=False, sort_keys=False, allow_unicode=True).strip()
+        # 在每一行前面加上两个空格的缩进，并以 - 开头
+        indented_p = "\n".join([f"  {line}" if i > 0 else f"- {line}" for i, line in enumerate(p_str.split('\n'))])
+        output.append(f"  {indented_p}")
+        output.append("") # 节点后空一行
+        output.append("\nproxy-groups:")
     
     # 基础组
     groups_template = [
