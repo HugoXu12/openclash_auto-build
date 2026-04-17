@@ -26,7 +26,7 @@ def main():
     # --- 配置信息 ---
     GITHUB_USER = "HugoXu12"
     GITHUB_REPO = "openclash-auto-build" 
-    GITHUB_REPO_RAW = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/main/rules"
+    GITHUB_REPO_RAW = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/refs/heads/main/rules"
 
     ICON_MAP = {
         "Google": "https://raw.githubusercontent.com/Vbaethon/HOMOMIX/blob/main/Icon/Color/Google.png",
