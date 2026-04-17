@@ -6,7 +6,9 @@ set -e
 echo "=== 1. 初始化文件夹 ==="
 rm -rf tmp rules build
 mkdir -p tmp rules build
-touch rules-src/Proxy_custom.list rules-src/Direct_custom.list
+
+#如果文件不存在，就自动创建一个空的白文件；如果文件已经存在，就只更新一下它的修改时间，不会破坏里面的内容。
+touch rules-src/Proxy_custom.list rules-src/Direct_custom.list rules-src/rules.list
 
 # 定义清理函数（去除 # 注释、空行、末尾空格，并去重）
 clean_list() {
