@@ -1,50 +1,56 @@
-name: Auto Build OpenClash Rules
+name: Build OpenClash Config and Rules
 
 on:
-  workflow_dispatch: # 支持手动点击运行
   schedule:
-    - cron: '0 18 * * *' # UTC 18:00，即北京时间每天凌晨 2:00
+    # cron 使用 UTC 时间，UTC 18:00 对应北京时间 02:00
+    - cron: '0 18 * * *'
+  workflow_dispatch: # 允许手动点击运行
 
+# 必须声明写入权限才能推送到当前仓库
 permissions:
-  contents: write # 赋予 Action 提交代码的写权限
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: Grant execute permission for scripts
+      - name: Install Python Dependencies
+        run: pip install pyyaml
+
+      - name: Make script executable
         run: chmod +x scripts/merge.sh
 
-      - name: Process Rules (merge.sh)
+      - name: Run shell script to download and process lists
         run: ./scripts/merge.sh
 
-      - name: Generate config.yaml (build_yaml.py)
-        env:
-          GITHUB_REPOSITORY: ${{ github.repository }}
+      - name: Run python script to build YAML
         run: python scripts/build_yaml.py
 
-      - name: Commit and Push Changes
+      - name: Commit and Push changes
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          # 添加所有生成的文件夹
+          
           git add rules/ tmp/ build/
-          git commit -m "Auto update rules and config.yaml" || echo "No changes to commit"
+          
+          # 如果没有文件改变，则静默忽略，避免报错停止
+          git commit -m "Auto-update OpenClash rules & config" || echo "No changes to commit"
           git push
 
-      # 保留过程文件用于 Debug。如果以后不需要 debug 了，取消下面几行的注释即可。
-      # - name: Clean up tmp files
+      # 调试需要：保留过程文件。
+      # 之后如果你希望自动删除，只需取消下面这几行的注释即可：
+      # - name: Cleanup debug files
       #   run: |
-      #     rm -rf tmp
-      #     git add -A
-      #     git commit -m "chore: clean up tmp files" || true
+      #     rm -rf tmp/*
+      #     git add tmp/
+      #     git commit -m "Cleanup debug files" || echo "No cleanup to commit"
       #     git push
