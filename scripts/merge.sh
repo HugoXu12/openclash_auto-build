@@ -1,84 +1,63 @@
 #!/bin/bash
+
+# 确保脚本遇到错误时停止执行
 set -e
 
-echo "=== 1. 初始化文件夹 ==="
-rm -rf tmp rules build
-mkdir -p tmp rules build
-touch rules-src/Proxy_custom.list rules-src/Direct_custom.list
+echo "=== 1. 初始化目录 ==="
+mkdir -p tmp rules build rules-src config
+# 清理旧文件保证环境无污染
+rm -rf tmp/* rules/* build/*
 
-# 定义清理函数（去除 # 注释、空行、末尾空格，并去重）
+# 定义清理格式的函数（去注释、去空行、去末尾空格、去重）
 clean_list() {
-    local file=$1
-    if [ -f "$file" ]; then
-        sed -i 's/#.*//g' "$file"          # 删注释
-        sed -i 's/[[:space:]]*$//' "$file" # 删末尾空格
-        sed -i '/^[[:space:]]*$/d' "$file" # 删空行
-        sort -u "$file" -o "$file"         # 排序并去重
-    fi
+    sed 's/#.*//g' | sed 's/[[:space:]]*$//' | awk 'NF' | sort -u
 }
 
-# 清理链接中可能携带的乱码或引号
-clean_url() {
-    echo "$1" | tr -d '"' | tr -d "'" | tr -d '\r'
-}
+echo "=== 2. 解析 rules-src/rules.list ==="
+RULES_LIST="rules-src/rules.list"
 
-echo "=== 2. 处理 [Custom_link] ==="
-awk '/^\[Custom_link\]/{flag=1; next} /^\[/{flag=0} flag && NF' rules-src/rules.list | while IFS='|' read -r name url; do
-    name=$(echo "$name" | xargs)
-    url=$(clean_url "$url")
-    if [ -n "$name" ] && [ -n "$url" ]; then
-        echo "正在下载 Custom 规则: $name"
-        wget -qO "tmp/${name}_RAW.list" "$url"
-        clean_list "tmp/${name}_RAW.list"
-        cp "tmp/${name}_RAW.list" "rules/${name}.list"
-    fi
+# 提取并下载 [Custom_link]
+echo ">>> 处理 Custom_link..."
+awk '/^\[Custom_link\]/{flag=1; next} /^\[.*\]/{flag=0} flag && NF' "$RULES_LIST" | while IFS="|" read -r name url; do
+    echo "Downloading $name from $url"
+    curl -sL "$url" | clean_list > "tmp/${name}_RAW.list"
+    cp "tmp/${name}_RAW.list" "rules/${name}.list"
 done
 
-echo "=== 3. 处理 [Proxy-src_link] ==="
-awk '/^\[Proxy-src_link\]/{flag=1; next} /^\[/{flag=0} flag && NF' rules-src/rules.list | while read -r url; do
-    url=$(clean_url "$url")
-    if [ -n "$url" ] && [[ ! "$url" =~ ^# ]]; then
-        wget -qO- "$url" >> "tmp/Proxy_tmp.list"
-    fi
+# 提取并下载 [Proxy-src_link]
+echo ">>> 处理 Proxy-src_link..."
+awk '/^\[Proxy-src_link\]/{flag=1; next} /^\[.*\]/{flag=0} flag && NF' "$RULES_LIST" | while read -r url; do
+    curl -sL "$url" >> "tmp/Proxy_raw_merge.list"
 done
-clean_list "tmp/Proxy_tmp.list"
+cat "tmp/Proxy_raw_merge.list" | clean_list > "tmp/Proxy_tmp.list"
 
-echo "=== 4. 处理 [Direct-src_link] ==="
-awk '/^\[Direct-src_link\]/{flag=1; next} /^\[/{flag=0} flag && NF' rules-src/rules.list | while read -r url; do
-    url=$(clean_url "$url")
-    if [ -n "$url" ] && [[ ! "$url" =~ ^# ]]; then
-        wget -qO- "$url" >> "tmp/Direct_tmp.list"
-    fi
+# 提取并下载 [Direct-src_link]
+echo ">>> 处理 Direct-src_link..."
+awk '/^\[Direct-src_link\]/{flag=1; next} /^\[.*\]/{flag=0} flag && NF' "$RULES_LIST" | while read -r url; do
+    curl -sL "$url" >> "tmp/Direct_raw_merge.list"
 done
-clean_list "tmp/Direct_tmp.list"
+cat "tmp/Direct_raw_merge.list" | clean_list > "tmp/Direct_tmp.list"
 
-echo "=== 5. 生成 Proxy_exclude.list ==="
-# 将所有 Custom_RAW + 个人自定义 Proxy/Direct 汇总，作为 Proxy 的排除项
-cat tmp/*_RAW.list rules-src/Proxy_custom.list rules-src/Direct_custom.list 2>/dev/null > tmp/Proxy_exclude.list
-clean_list "tmp/Proxy_exclude.list"
 
-echo "=== 6. 对比去重，生成 rules/Proxy.list & tmp/delete_proxy.list ==="
-# 从 Proxy_tmp 中剔除包含在 Proxy_exclude 中的内容
-grep -v -x -F -f tmp/Proxy_exclude.list tmp/Proxy_tmp.list > rules/Proxy.list || true
-grep -x -F -f tmp/Proxy_exclude.list tmp/Proxy_tmp.list > tmp/delete_proxy.list || true
-clean_list "rules/Proxy.list"
-clean_list "tmp/delete_proxy.list"
+echo "=== 3. 规则对比与去重处理 ==="
 
-echo "=== 7. 生成 Direct_exclude.list ==="
-# Direct 的排除项 = 之前所有的排除项 (Proxy_exclude) + 刚刚生成的 Proxy.list
-cat tmp/Proxy_exclude.list rules/Proxy.list 2>/dev/null > tmp/Direct_exclude.list
-clean_list "tmp/Direct_exclude.list"
+# (步骤11) 生成 Proxy_exclude.list (Custom_RAW + Proxy_custom + Direct_custom)
+cat tmp/*_RAW.list rules-src/Proxy_custom.list rules-src/Direct_custom.list 2>/dev/null | clean_list > tmp/Proxy_exclude.list
 
-echo "=== 8. 对比去重，生成 rules/Direct.list & tmp/delete_direct.list ==="
-grep -v -x -F -f tmp/Direct_exclude.list tmp/Direct_tmp.list > rules/Direct.list || true
-grep -x -F -f tmp/Direct_exclude.list tmp/Direct_tmp.list > tmp/delete_direct.list || true
-clean_list "rules/Direct.list"
-clean_list "tmp/delete_direct.list"
+# (步骤11) 生成 Proxy.list 并提取 delete_proxy.list
+# 使用 awk 对比：在 exclude 中的放进 delete，不在的放进 Proxy.list
+awk 'NR==FNR{exclude[$0]; next} {
+    if ($0 in exclude) print $0 > "tmp/delete_proxy.list";
+    else print $0 > "rules/Proxy.list"
+}' tmp/Proxy_exclude.list tmp/Proxy_tmp.list
 
-echo "=== 9. 收尾：转移 Custom 列表到 rules 目录 ==="
-cp rules-src/Proxy_custom.list rules/Proxy_custom.list
-cp rules-src/Direct_custom.list rules/Direct_custom.list
-clean_list "rules/Proxy_custom.list"
-clean_list "rules/Direct_custom.list"
+# (步骤12) 生成 Direct_exclude.list (Proxy_exclude + rules/Proxy.list)
+cat tmp/Proxy_exclude.list rules/Proxy.list 2>/dev/null | clean_list > tmp/Direct_exclude.list
 
-echo "规则合并去重全部完成！"
+# (步骤13) 生成 Direct.list 并提取 delete_direct.list
+awk 'NR==FNR{exclude[$0]; next} {
+    if ($0 in exclude) print $0 > "tmp/delete_direct.list";
+    else print $0 > "rules/Direct.list"
+}' tmp/Direct_exclude.list tmp/Direct_tmp.list
+
+echo "=== 规则合并处理完成 ==="
