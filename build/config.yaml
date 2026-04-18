@@ -45,12 +45,12 @@ proxy-groups:
   - name: 🚀 节点选择
     type: select
     proxies:
-    - HK-2
+      - HK-2
 
   - name: ♻️ 自动选择
     type: url-test
     proxies:
-    - HK-2
+      - HK-2
     url: http://www.gstatic.com/generate_204
     interval: 300
     tolerance: 50
@@ -58,34 +58,34 @@ proxy-groups:
   - name: 🟢 全球直连
     type: select
     proxies:
-    - DIRECT
+      - DIRECT
 
   - name: Google
     type: select
     proxies:
-    - ♻️ 自动选择
-    - 🚀 节点选择
+      - ♻️ 自动选择
+      - 🚀 节点选择
     icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/main/Icon/Color/Google.png
 
   - name: YouTube
     type: select
     proxies:
-    - ♻️ 自动选择
-    - 🚀 节点选择
+      - ♻️ 自动选择
+      - 🚀 节点选择
     icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/main/Icon/Color/YouTube.png
 
   - name: AI
     type: select
     proxies:
-    - ♻️ 自动选择
-    - 🚀 节点选择
+      - ♻️ 自动选择
+      - 🚀 节点选择
     icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/main/Icon/Color/AI.png
 
   - name: Netflix
     type: select
     proxies:
-    - ♻️ 自动选择
-    - 🚀 节点选择
+      - ♻️ 自动选择
+      - 🚀 节点选择
     icon: https://raw.githubusercontent.com/Vbaethon/HOMOMIX/main/Icon/Color/Netflix_b.png
 
 
