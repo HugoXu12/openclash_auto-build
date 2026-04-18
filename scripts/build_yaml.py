@@ -1,6 +1,19 @@
 import os
 import yaml
 
+# ==========================================
+# 核心修复区：自定义格式化器
+# 1. ignore_aliases: 防止出现 &id001 这种锚点
+# 2. increase_indent: 强制解决 proxies 列表不缩进的问题
+# ==========================================
+class ClashDumper(yaml.SafeDumper):
+    def ignore_aliases(self, data):
+        return True
+        
+    def increase_indent(self, flow=False, indentless=False):
+        # 强制将 indentless 设置为 False，这样所有的列表项 - 都会自动往后缩进两格
+        return super(ClashDumper, self).increase_indent(flow, False)
+
 def read_custom_links(filepath):
     """提取 [Custom_link] 节的规则名称"""
     custom_names = []
@@ -36,8 +49,7 @@ def read_and_format_rules(filepath, policy):
                 continue
             
             parts = line.split(',')
-            # 处理特殊情况：如果原始规则带有 no-resolve，策略组必须插在它前面
-            # 例如 IP-CIDR,1.1.1.1/32,no-resolve -> IP-CIDR,1.1.1.1/32,Policy,no-resolve
+            # 处理 no-resolve
             if len(parts) >= 2 and parts[-1].strip().lower() == 'no-resolve':
                 rule_lines.append(f"  - {','.join(parts[:-1])},{policy},no-resolve")
             else:
@@ -73,7 +85,8 @@ def main():
     # 3. 注入 proxies
     output.append("\nproxies:")
     for p in proxies:
-        p_block = yaml.dump(p, default_flow_style=False, sort_keys=False, allow_unicode=True).strip()
+        # 注意：这里加入了 Dumper=ClashDumper
+        p_block = yaml.dump(p, default_flow_style=False, sort_keys=False, allow_unicode=True, Dumper=ClashDumper).strip()
         lines = p_block.split('\n')
         output.append(f"  - {lines[0]}")
         for line in lines[1:]:
@@ -96,30 +109,29 @@ def main():
         all_groups.append(g)
 
     for g in all_groups:
-        g_block = yaml.dump(g, default_flow_style=False, sort_keys=False, allow_unicode=True).strip()
+        # 注意：这里加入了 Dumper=ClashDumper
+        g_block = yaml.dump(g, default_flow_style=False, sort_keys=False, allow_unicode=True, Dumper=ClashDumper).strip()
         lines = g_block.split('\n')
         output.append(f"  - {lines[0]}")
         for line in lines[1:]:
             output.append(f"    {line}")
         output.append("")
 
-    # === 注意：rule-providers 块已完全删除 ===
-
     # 5. 注入 rules (展开所有本地 .list 文件)
     output.append("\nrules:")
     
-    # (1) 高优先级：Custom 规则 (从 rules 文件夹读取)
+    # (1) 高优先级：Custom 规则
     for name in custom_names:
         filepath = f"rules/{name}.list"
         output.extend(read_and_format_rules(filepath, name))
     
-    # (2) 中高优先级：个人自定义直连 (从 rules-src 文件夹读取)
+    # (2) 中高优先级：个人自定义直连
     output.extend(read_and_format_rules("rules-src/Direct_custom.list", "🟢 全球直连"))
     
-    # (3) 中优先级：个人自定义代理 (从 rules-src 文件夹读取)
+    # (3) 中优先级：个人自定义代理
     output.extend(read_and_format_rules("rules-src/Proxy_custom.list", "🚀 节点选择"))
     
-    # (4) 基础优先级：汇总规则 (从 rules 文件夹读取)
+    # (4) 基础优先级：汇总规则
     output.extend(read_and_format_rules("rules/Direct.list", "🟢 全球直连"))
     output.extend(read_and_format_rules("rules/Proxy.list", "🚀 节点选择"))
     
@@ -132,8 +144,7 @@ def main():
     with open('build/config.yaml', 'w', encoding='utf-8') as f:
         f.write("\n".join(output))
 
-    print("=== 全展开版 Inline Rules YAML 已生成 ===")
+    print("=== 排版完美对齐版 Inline Rules YAML 已生成 ===")
 
 if __name__ == '__main__':
     main()
-
